@@ -36,13 +36,51 @@ func HistoricalData(symbol string, timeframe string, limit int) ([]Bar, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get 1Day bars for %s: %w", symbol, err)
 	}
-	return []Bar{limitbars, oneminutebars, fiveminutebars, onedaybars}, nil
+	return append(append(append(limitbars, oneminutebars...), fiveminutebars...), onedaybars...), nil
+	//append inception wtf
 }
 
 func calculateSMA(bars []Bar) float64 {
-	//placeholder for SMA calculation
+	if len(bars) == 0 {
+		return 0
+	}
+	sum := 0.0
+	for _, bar := range bars {
+		sum += bar.Close
+	}
+	return sum / float64(len(bars))
 }
 
 func GenerateSignal(symbol string) (*Signal, error) {
 	// Fetch current price
+	currentPrice, err := GetCurrentPrice(symbol)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current price for %s: %w", symbol, err)
+	}
+
+	// Fetch historical data
+	historicalData, err := HistoricalData(symbol, "1Day", 100)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get historical data for %s: %w", symbol, err)
+	}
+
+	// Calculate SMA
+	sma := calculateSMA(historicalData)
+
+	// Generate signal
+	var action string
+	if currentPrice > sma {
+		action = "BUY"
+	} else if currentPrice < sma {
+		action = "SELL"
+	} else {
+		action = "HOLD"
+	}
+
+	return &Signal{
+		symbol:       symbol,
+		currentPrice: currentPrice,
+		SMA:          sma,
+		Action:       action,
+	}, nil
 }
