@@ -17,9 +17,9 @@ func main() {
 	secretKey := os.Getenv("ALPACA_SECRET_KEY")
 
 	alpclient := alpaca.NewClient(alpaca.ClientOpts{
-		apiKeyC:    apiKey,
-		secretKeyC: secretKey,
-		baseURL:    "https://paper-api.alpaca.markets/v2/account",
+		APIKey:    apiKey,
+		APISecret: secretKey,
+		BaseURL:   "https://paper-api.alpaca.markets",
 	})
 
 	req, _ := http.NewRequest("GET", "https://paper-api.alpaca.markets/v2/account", nil)

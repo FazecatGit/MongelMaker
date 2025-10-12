@@ -49,9 +49,11 @@ func GetAlpacaBars(symbol string, timeframe string, limit int) ([]Bar, error) {
 	return r.Bars, nil
 }
 
-func GetLastQuote(symbol string) (*struct {
-	Price float64 `json:"ap"}`
-}, error) {
+type LastQuote struct {
+	Price float64 `json:"ap"`
+}
+
+func GetLastQuote(symbol string) (*LastQuote, error) {
 	apiKey := os.Getenv("ALPACA_API_KEY")
 	secretKey := os.Getenv("ALPACA_SECRET_KEY")
 
@@ -72,12 +74,14 @@ func GetLastQuote(symbol string) (*struct {
 		return nil, fmt.Errorf("failed to get last quote: %s", resp.Status)
 	}
 
-	var quote struct {
-		Price float64 `json:"ap"`
+	type Response struct {
+		Quote LastQuote `json:"quote"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&quote); err != nil {
+
+	var r Response
+	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
 		return nil, err
 	}
 
-	return &quote, nil
+	return &r.Quote, nil
 }
