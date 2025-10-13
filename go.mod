@@ -10,6 +10,7 @@ require (
 require (
 	cloud.google.com/go v0.118.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 )

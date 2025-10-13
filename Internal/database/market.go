@@ -11,6 +11,13 @@ type Signal struct {
 	Action       string // "BUY", "SELL", "HOLD"
 }
 
+type MultiTimeframeData struct {
+	RequestedData []Bar
+	OneMinData    []Bar
+	FiveMinData   []Bar
+	OneDayData    []Bar
+}
+
 func GetCurrentPrice(symbol string) (float64, error) {
 	Quote, err := GetLastQuote(symbol)
 	if err != nil {
@@ -19,7 +26,8 @@ func GetCurrentPrice(symbol string) (float64, error) {
 	return Quote.Price, nil
 }
 
-func HistoricalData(symbol string, timeframe string, limit int) ([]Bar, error) {
+func FetchAllTimeframes(symbol string, timeframe string, limit int) (*MultiTimeframeData, error) {
+
 	limitbars, err := GetAlpacaBars(symbol, timeframe, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get historical data for %s: %w", symbol, err)
@@ -36,8 +44,12 @@ func HistoricalData(symbol string, timeframe string, limit int) ([]Bar, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get 1Day bars for %s: %w", symbol, err)
 	}
-	return append(append(append(limitbars, oneminutebars...), fiveminutebars...), onedaybars...), nil
-	//append inception wtf
+	return &MultiTimeframeData{
+		RequestedData: limitbars,
+		OneMinData:    oneminutebars,
+		FiveMinData:   fiveminutebars,
+		OneDayData:    onedaybars,
+	}, nil
 }
 
 func calculateSMA(bars []Bar) float64 {
@@ -59,13 +71,13 @@ func GenerateSignal(symbol string) (*Signal, error) {
 	}
 
 	// Fetch historical data
-	historicalData, err := HistoricalData(symbol, "1Day", 100)
+	historicalData, err := FetchAllTimeframes(symbol, "1Day", 100)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get historical data for %s: %w", symbol, err)
 	}
 
 	// Calculate SMA
-	sma := calculateSMA(historicalData)
+	sma := calculateSMA(historicalData.OneDayData)
 
 	// Generate signal
 	var action string
