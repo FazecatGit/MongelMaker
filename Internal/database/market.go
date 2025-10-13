@@ -15,6 +15,7 @@ type MultiTimeframeData struct {
 	RequestedData []Bar
 	OneMinData    []Bar
 	FiveMinData   []Bar
+	OneHourData   []Bar
 	OneDayData    []Bar
 }
 
@@ -40,6 +41,12 @@ func FetchAllTimeframes(symbol string, timeframe string, limit int) (*MultiTimef
 	if err != nil {
 		return nil, fmt.Errorf("failed to get 5Min bars for %s: %w", symbol, err)
 	}
+
+	onehourbars, err := GetAlpacaBars(symbol, "1Hour", 100)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get 1Hour bars for %s: %w", symbol, err)
+	}
+
 	onedaybars, err := GetAlpacaBars(symbol, "1Day", 100)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get 1Day bars for %s: %w", symbol, err)
@@ -48,6 +55,7 @@ func FetchAllTimeframes(symbol string, timeframe string, limit int) (*MultiTimef
 		RequestedData: limitbars,
 		OneMinData:    oneminutebars,
 		FiveMinData:   fiveminutebars,
+		OneHourData:   onehourbars,
 		OneDayData:    onedaybars,
 	}, nil
 }
