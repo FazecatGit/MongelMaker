@@ -63,9 +63,28 @@ func main() {
 		return
 	}
 
-	interactive.DisplayBasicData(bars, "AAPL", timeframe)
+	// Get user's display preference
+	displayChoice, err := interactive.ShowDisplayMenu()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
 
-	fmt.Printf("Fetched %d bars for AAPL on %s timeframe\n", len(bars), timeframe)
+	// Call the appropriate display function based on choice
+	switch displayChoice {
+	case "basic":
+		interactive.DisplayBasicData(bars, "AAPL", timeframe)
+	case "full":
+		interactive.DisplayAdvancedData(bars, "AAPL", timeframe)
+	case "analytics":
+		interactive.DisplayAnalyticsData(bars, "AAPL", timeframe)
+	case "all":
+		interactive.DisplayBasicData(bars, "AAPL", timeframe)
+		interactive.DisplayAdvancedData(bars, "AAPL", timeframe)
+		interactive.DisplayAnalyticsData(bars, "AAPL", timeframe)
+	}
+
+	fmt.Printf("\n✅ Displayed %d bars for AAPL on %s timeframe\n", len(bars), timeframe)
 
 	balanceChange := account.Equity.Sub(account.LastEquity)
 
