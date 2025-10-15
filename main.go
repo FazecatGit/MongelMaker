@@ -24,8 +24,6 @@ func main() {
 	}
 	defer datafeed.CloseDatabase()
 
-	testStorageFunction()
-
 	apiKey := os.Getenv("ALPACA_API_KEY")
 	secretKey := os.Getenv("ALPACA_SECRET_KEY")
 
@@ -56,6 +54,9 @@ func main() {
 		fmt.Println("Error:", err)
 		return
 	}
+
+	// Test storage function with user's selected timeframe
+	testStorageFunctionWithTimeframe(timeframe)
 
 	bars, err := interactive.FetchMarketData("AAPL", timeframe, 10)
 	if err != nil {
@@ -91,22 +92,38 @@ func main() {
 	fmt.Println("Status:", resp.Status, balanceChange)
 }
 
-func testStorageFunction() {
+func testStorageFunctionWithTimeframe(selectedTimeframe string) {
 	fmt.Println("\n🔄 Testing StoreBarsWithAnalytics function...")
 
 	symbol := "AAPL"
 	fmt.Printf("📊 Fetching multi-timeframe data for %s...\n", symbol)
 
-	data, err := datafeed.FetchAllTimeframes(symbol, "1Day", 5)
+	data, err := datafeed.FetchAllTimeframes(symbol, selectedTimeframe, 5)
 	if err != nil {
 		log.Printf("Failed to fetch data: %v", err)
 		return
 	}
 
-	fmt.Printf("💾 Storing %d bars of 1Min data with analytics...\n", len(data.OneMinData))
-	err = datafeed.StoreBarsWithAnalytics(symbol, "1Min", data.OneDayData)
+	// Use the correct data array based on selected timeframe
+	var barsToStore []datafeed.Bar
+	switch selectedTimeframe {
+	case "1Min":
+		barsToStore = data.OneMinData
+	case "5Min":
+		barsToStore = data.FiveMinData
+	case "1Hour":
+		barsToStore = data.OneHourData
+	case "1Day":
+		barsToStore = data.OneDayData
+	default:
+		log.Printf("Unknown timeframe: %s", selectedTimeframe)
+		return
+	}
+
+	fmt.Printf("💾 Storing %d bars of %s data with analytics...\n", len(barsToStore), selectedTimeframe)
+	err = datafeed.StoreBarsWithAnalytics(symbol, selectedTimeframe, barsToStore)
 	if err != nil {
-		log.Printf("Failed to store 1Min data: %v", err)
+		log.Printf("Failed to store %s data: %v", selectedTimeframe, err)
 		return
 	}
 

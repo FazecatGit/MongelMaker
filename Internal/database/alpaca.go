@@ -21,12 +21,15 @@ func GetAlpacaBars(symbol string, timeframe string, limit int) ([]Bar, error) {
 	apiKey := os.Getenv("ALPACA_API_KEY")
 	secretKey := os.Getenv("ALPACA_SECRET_KEY")
 
-	url := fmt.Sprintf(
+	// Use simpler URL for now - some accounts may not have access to historical daily data
+	apiURL := fmt.Sprintf(
 		"https://data.alpaca.markets/v2/stocks/%s/bars?timeframe=%s&limit=%d",
 		symbol, timeframe, limit,
 	)
 
-	req, _ := http.NewRequest("GET", url, nil)
+	fmt.Printf("🔗 API Request: %s\n", apiURL)
+
+	req, _ := http.NewRequest("GET", apiURL, nil)
 	req.Header.Set("APCA-API-KEY-ID", apiKey)
 	req.Header.Set("APCA-API-SECRET-KEY", secretKey)
 
@@ -37,6 +40,14 @@ func GetAlpacaBars(symbol string, timeframe string, limit int) ([]Bar, error) {
 	}
 	defer resp.Body.Close()
 
+	fmt.Printf("📡 API Response Status: %s\n", resp.Status)
+
+	// Check for API errors
+	if resp.StatusCode == 403 {
+		fmt.Printf("⚠️  403 Forbidden - Your account may not have access to %s data\n", timeframe)
+		return []Bar{}, nil // Return empty slice instead of error
+	}
+
 	type Response struct {
 		Bars []Bar `json:"bars"`
 	}
@@ -46,6 +57,7 @@ func GetAlpacaBars(symbol string, timeframe string, limit int) ([]Bar, error) {
 		return nil, err
 	}
 
+	fmt.Printf("📊 Received %d bars\n", len(r.Bars))
 	return r.Bars, nil
 }
 
@@ -84,4 +96,33 @@ func GetLastQuote(symbol string) (*LastQuote, error) {
 	}
 
 	return &r.Quote, nil
+}
+
+func GetLastTrade(symbol string) (*Bar, error) {
+	apiKey := os.Getenv("ALPACA_API_KEY")
+	secretKey := os.Getenv("ALPACA_SECRET_KEY")
+
+	url := fmt.Sprintf("https://data.alpaca.markets/v2/stocks/%s/trades/latest", url.PathEscape(symbol))
+
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("APCA-API-KEY-ID", apiKey)
+	req.Header.Set("APCA-API-SECRET-KEY", secretKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get last trade: %s", resp.Status)
+	}
+
+	var r Bar
+	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+		return nil, err
+	}
+
+	return &r, nil
 }
