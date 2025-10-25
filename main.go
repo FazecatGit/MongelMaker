@@ -8,6 +8,7 @@ import (
 
 	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
+	"github.com/fazecat/mongelmaker/Internal/utils"
 	"github.com/fazecat/mongelmaker/interactive"
 	"github.com/joho/godotenv"
 )
@@ -24,8 +25,11 @@ func main() {
 	}
 	defer datafeed.CloseDatabase()
 
-	apiKey := os.Getenv("ALPACA_API_KEY")
-	secretKey := os.Getenv("ALPACA_SECRET_KEY")
+	// Test the retry logic
+	utils.TestRetryLogic()
+
+		apiKey := os.Getenv("ALPACA_API_KEY")
+	secretKey := os.Getenv("ALPACA_API_SECRET")
 
 	alpclient := alpaca.NewClient(alpaca.ClientOpts{
 		APIKey:    apiKey,
@@ -90,6 +94,9 @@ func main() {
 	balanceChange := account.Equity.Sub(account.LastEquity)
 
 	fmt.Println("Status:", resp.Status, balanceChange)
+	
+	// TODO: Add Obsidian export functionality here later
+	fmt.Println("� Obsidian export functionality will be added in future updates")
 }
 
 func testStorageFunctionWithTimeframe(selectedTimeframe string) {

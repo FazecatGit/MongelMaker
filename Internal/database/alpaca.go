@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
 type Bar struct {
@@ -19,46 +21,63 @@ type Bar struct {
 
 func GetAlpacaBars(symbol string, timeframe string, limit int) ([]Bar, error) {
 	apiKey := os.Getenv("ALPACA_API_KEY")
-	secretKey := os.Getenv("ALPACA_SECRET_KEY")
+	secretKey := os.Getenv("ALPACA_API_SECRET")
 
-	// Use simpler URL for now - some accounts may not have access to historical daily data
 	apiURL := fmt.Sprintf(
-		"https://data.alpaca.markets/v2/stocks/%s/bars?timeframe=%s&limit=%d",
+		"https://data.alpaca.markets/v2/stocks/%s/bars?timeframe=%s&limit=%d&start=2025-10-23T09:30:00Z&end=2025-10-23T16:00:00Z",
 		symbol, timeframe, limit,
 	)
 
 	fmt.Printf("🔗 API Request: %s\n", apiURL)
 
-	req, _ := http.NewRequest("GET", apiURL, nil)
-	req.Header.Set("APCA-API-KEY-ID", apiKey)
-	req.Header.Set("APCA-API-SECRET-KEY", secretKey)
+	//retry logic
+	var bars []Bar
+	retryConfig := utils.DefaultRetryConfig()
+	
+	err := utils.RetryWithBackoff(func() error {
+		req, _ := http.NewRequest("GET", apiURL, nil)
+		req.Header.Set("APCA-API-KEY-ID", apiKey)
+		req.Header.Set("APCA-API-SECRET-KEY", secretKey)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		fmt.Printf("📡 API Response Status: %s\n", resp.Status)
+
+		// Checking API errors
+		if resp.StatusCode == 403 {
+			fmt.Printf("⚠️  403 Forbidden - Your account may not have access to %s data\n", timeframe)
+			bars = []Bar{} // Return empty slice instead of error
+			return nil
+		}
+		
+		if resp.StatusCode != 200 {
+			return fmt.Errorf("API returned status %d", resp.StatusCode)
+		}
+
+		type Response struct {
+			Bars []Bar `json:"bars"`
+		}
+
+		var r Response
+		if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+			return err
+		}
+
+		bars = r.Bars
+		return nil
+	}, retryConfig)
+
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
-	fmt.Printf("📡 API Response Status: %s\n", resp.Status)
-
-	// Check for API errors
-	if resp.StatusCode == 403 {
-		fmt.Printf("⚠️  403 Forbidden - Your account may not have access to %s data\n", timeframe)
-		return []Bar{}, nil // Return empty slice instead of error
-	}
-
-	type Response struct {
-		Bars []Bar `json:"bars"`
-	}
-
-	var r Response
-	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("📊 Received %d bars\n", len(r.Bars))
-	return r.Bars, nil
+	fmt.Printf("📊 Received %d bars\n", len(bars))
+	return bars, nil
 }
 
 type LastQuote struct {
@@ -67,62 +86,78 @@ type LastQuote struct {
 
 func GetLastQuote(symbol string) (*LastQuote, error) {
 	apiKey := os.Getenv("ALPACA_API_KEY")
-	secretKey := os.Getenv("ALPACA_SECRET_KEY")
+	secretKey := os.Getenv("ALPACA_API_SECRET")
 
 	url := fmt.Sprintf("https://data.alpaca.markets/v2/stocks/%s/quotes/latest", url.PathEscape(symbol))
 
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("APCA-API-KEY-ID", apiKey)
-	req.Header.Set("APCA-API-SECRET-KEY", secretKey)
+	var quote *LastQuote
+	retryConfig := utils.DefaultRetryConfig()
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+	err := utils.RetryWithBackoff(func() error {
+		req, _ := http.NewRequest("GET", url, nil)
+		req.Header.Set("APCA-API-KEY-ID", apiKey)
+		req.Header.Set("APCA-API-SECRET-KEY", secretKey)
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get last quote: %s", resp.Status)
-	}
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
 
-	type Response struct {
-		Quote LastQuote `json:"quote"`
-	}
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("failed to get last quote: %s", resp.Status)
+		}
 
-	var r Response
-	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return nil, err
-	}
+		type Response struct {
+			Quote LastQuote `json:"quote"`
+		}
 
-	return &r.Quote, nil
+		var r Response
+		if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+			return err
+		}
+		
+		quote = &r.Quote
+		return nil
+	}, retryConfig)
+
+	return quote, err
 }
 
 func GetLastTrade(symbol string) (*Bar, error) {
 	apiKey := os.Getenv("ALPACA_API_KEY")
-	secretKey := os.Getenv("ALPACA_SECRET_KEY")
+	secretKey := os.Getenv("ALPACA_API_SECRET")
 
 	url := fmt.Sprintf("https://data.alpaca.markets/v2/stocks/%s/trades/latest", url.PathEscape(symbol))
+	
+	var trade *Bar
+	retryConfig := utils.DefaultRetryConfig()
+	
+	err := utils.RetryWithBackoff(func() error {
+		req, _ := http.NewRequest("GET", url, nil)
+		req.Header.Set("APCA-API-KEY-ID", apiKey)
+		req.Header.Set("APCA-API-SECRET-KEY", secretKey)
 
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("APCA-API-KEY-ID", apiKey)
-	req.Header.Set("APCA-API-SECRET-KEY", secretKey)
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("failed to get last trade: %s", resp.Status)
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to get last trade: %s", resp.Status)
-	}
+		var r Bar
+		if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+			return err
+		}
 
-	var r Bar
-	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return nil, err
-	}
+		trade = &r
+		return nil
+	}, retryConfig)
 
-	return &r, nil
+	return trade, err
 }
