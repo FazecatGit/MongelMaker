@@ -1,6 +1,10 @@
 package strategy
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/fazecat/mongelmaker/Internal/utils"
+)
 
 func CalculateRSI(closes []float64, period int) ([]float64, error) {
 	rsi := make([]float64, len(closes))
@@ -35,4 +39,22 @@ func CalculateRSI(closes []float64, period int) ([]float64, error) {
 	}
 
 	return rsi, nil
+}
+
+func FetchClosingPrices(symbol string, days int) ([]float64, error) {
+	// Placeholder: Fetch closing prices from database or API
+	return []float64{}, nil
+}
+
+func SaveRSI(symbol string, date string, rsiValue float64) error {
+	// Placeholder: Save RSI value to database
+	return nil
+}
+func DetermineRSISignal(rsiValue float64) string {
+	// Placeholder: Determine buy/sell/hold based on RSI value
+	return "hold"
+}
+func CalculateAndStoreRSI(symbol string) error {
+	// Placeholder: Fetch closing prices
+	return nil
 }
