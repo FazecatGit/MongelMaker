@@ -33,7 +33,7 @@ func GetAlpacaBars(symbol string, timeframe string, limit int) ([]Bar, error) {
 	//retry logic
 	var bars []Bar
 	retryConfig := utils.DefaultRetryConfig()
-	
+
 	err := utils.RetryWithBackoff(func() error {
 		req, _ := http.NewRequest("GET", apiURL, nil)
 		req.Header.Set("APCA-API-KEY-ID", apiKey)
@@ -54,7 +54,7 @@ func GetAlpacaBars(symbol string, timeframe string, limit int) ([]Bar, error) {
 			bars = []Bar{} // Return empty slice instead of error
 			return nil
 		}
-		
+
 		if resp.StatusCode != 200 {
 			return fmt.Errorf("API returned status %d", resp.StatusCode)
 		}
@@ -117,7 +117,7 @@ func GetLastQuote(symbol string) (*LastQuote, error) {
 		if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
 			return err
 		}
-		
+
 		quote = &r.Quote
 		return nil
 	}, retryConfig)
@@ -130,10 +130,10 @@ func GetLastTrade(symbol string) (*Bar, error) {
 	secretKey := os.Getenv("ALPACA_API_SECRET")
 
 	url := fmt.Sprintf("https://data.alpaca.markets/v2/stocks/%s/trades/latest", url.PathEscape(symbol))
-	
+
 	var trade *Bar
 	retryConfig := utils.DefaultRetryConfig()
-	
+
 	err := utils.RetryWithBackoff(func() error {
 		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Set("APCA-API-KEY-ID", apiKey)

@@ -1,0 +1,13 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "Internal/sql/queries/"
+    schema: "Internal/sql/migrations/"
+    gen:
+      go:
+        package: "database"
+        out: "Internal/database/sqlc"
+        emit_json_tags: true
+        emit_prepared_queries: false
+        emit_interface: false
+        emit_exact_table_names: false
