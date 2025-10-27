@@ -2,7 +2,6 @@ package strategy
 
 import (
 	"fmt"
-	"time"
 
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	"github.com/fazecat/mongelmaker/Internal/utils"
@@ -57,9 +56,14 @@ func DetermineRSISignal(rsiValue float64) string {
 }
 
 func CalculateAndStoreRSI(symbol string, period int) error {
-	closes, err := datafeed.FetchClosingPrices(symbol, period*3)
+	pricePoints, err := datafeed.FetchPricePoints(symbol, period*3)
 	if err != nil {
-		return fmt.Errorf("failed to fetch prices: %w", err)
+		return fmt.Errorf("failed to fetch price points: %w", err)
+	}
+
+	closes := make([]float64, len(pricePoints))
+	for i, pp := range pricePoints {
+		closes[i] = pp.Price
 	}
 
 	rsiValues, err := CalculateRSI(closes, period)
@@ -68,13 +72,17 @@ func CalculateAndStoreRSI(symbol string, period int) error {
 	}
 	defer datafeed.CloseDatabase()
 
-	latesetRSI := rsiValues[len(rsiValues)-1]
-
-	err = datafeed.SaveRSI(symbol, time.Now().Format("2006-01-02"), latesetRSI)
-	if err != nil {
-		return fmt.Errorf("failed to save RSI: %w", err)
+	for i := period; i < len(pricePoints); i++ {
+		err = datafeed.SaveRSI(symbol,
+			pricePoints[i].Timestamp.Format("2006-01-02"),
+			rsiValues[i])
+		if err != nil {
+			return fmt.Errorf("failed to save RSI for date %s: %w",
+				pricePoints[i].Timestamp.Format("2006-01-02"), err)
+		}
 	}
 
-	fmt.Printf("RSI for %s on latest date: %.2f\n", symbol, latesetRSI)
+	latestRSI := rsiValues[len(rsiValues)-1]
+	fmt.Printf("✅ Saved %d RSI values for %s. Latest: %.2f\n", len(pricePoints)-period, symbol, latestRSI)
 	return nil
 }

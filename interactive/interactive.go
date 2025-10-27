@@ -8,11 +8,18 @@ import (
 
 func ShowTimeframeMenu() (string, error) {
 	fmt.Println("Choose timeframe:")
-	fmt.Println("1. 1 Minute")
-	fmt.Println("2. 5 Minutes")
-	fmt.Println("3. 1 Hour")
-	fmt.Println("4. 1 Day")
-
+	fmt.Println("Choose timeframe:")
+	fmt.Println("1.  1 Minute")
+	fmt.Println("2.  3 Minutes")
+	fmt.Println("3.  5 Minutes")
+	fmt.Println("4.  10 Minutes")
+	fmt.Println("5.  30 Minutes")
+	fmt.Println("6.  1 Hour")
+	fmt.Println("7.  2 Hours")
+	fmt.Println("8.  4 Hours")
+	fmt.Println("9.  1 Day")
+	fmt.Println("10. 1 Week")
+	fmt.Println("11. 1 Month")
 	fmt.Print("Enter choice: ")
 	var choice int
 	_, err := fmt.Scan(&choice)
@@ -25,15 +32,29 @@ func ShowTimeframeMenu() (string, error) {
 	case 1:
 		return "1Min", nil
 	case 2:
-		return "5Min", nil
+		return "3Min", nil
 	case 3:
-		return "1Hour", nil
+		return "5Min", nil
 	case 4:
+		return "10Min", nil
+	case 5:
+		return "30Min", nil
+	case 6:
+		return "1Hour", nil
+	case 7:
+		return "2Hour", nil
+	case 8:
+		return "4Hour", nil
+	case 9:
 		return "1Day", nil
+	case 10:
+		return "1Week", nil
+	case 11:
+		return "1Month", nil
 	default:
 		fmt.Println("Invalid choice.")
+		return "", fmt.Errorf("invalid choice")
 	}
-	return "", fmt.Errorf("invalid choice")
 }
 
 func FetchMarketData(symbol string, timeframe string, limit int) ([]datafeed.Bar, error) {

@@ -9,7 +9,6 @@ import (
 	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
-	"github.com/fazecat/mongelmaker/Internal/utils"
 	"github.com/fazecat/mongelmaker/interactive"
 	"github.com/joho/godotenv"
 )
@@ -27,7 +26,8 @@ func main() {
 	defer datafeed.CloseDatabase()
 
 	// Test the retry logic
-	utils.TestRetryLogic()
+	// utils.TestRetryLogic()
+	// "github.com/fazecat/mongelmaker/Internal/utils"
 
 	apiKey := os.Getenv("ALPACA_API_KEY")
 	secretKey := os.Getenv("ALPACA_API_SECRET")
@@ -60,14 +60,25 @@ func main() {
 		return
 	}
 	// Test RSI calculation
-	testRSI()
+
+	// Get number of days from user
+	var days int
+	fmt.Print("How many days of history to analyze (recommended: 30-90): ")
+	fmt.Scan(&days)
+
+	// Get Stock Symbol from User
+	var symbol string
+	fmt.Print("\nEnter stock symbol to analyze (e.g., AAPL, TSLA, MSFT): ")
+	fmt.Scan(&symbol)
+
+	testRSI(symbol, days, timeframe)
 
 	// Get number of bars to fetch from user
 	var numBars int
 	fmt.Print("How many bars to display? ")
 	fmt.Scan(&numBars)
 
-	bars, err := interactive.FetchMarketData("AAPL", timeframe, numBars)
+	bars, err := interactive.FetchMarketData(symbol, timeframe, numBars)
 	if err != nil {
 		fmt.Println("Error fetching market data:", err)
 		return
@@ -83,32 +94,32 @@ func main() {
 	// Call the appropriate display function based on choice
 	switch displayChoice {
 	case "basic":
-		interactive.DisplayBasicData(bars, "AAPL", timeframe)
+		interactive.DisplayBasicData(bars, symbol, timeframe)
 	case "full":
-		interactive.DisplayAdvancedData(bars, "AAPL", timeframe)
+		interactive.DisplayAdvancedData(bars, symbol, timeframe)
 	case "analytics":
-		interactive.DisplayAnalyticsData(bars, "AAPL", timeframe)
+		interactive.DisplayAnalyticsData(bars, symbol, timeframe)
 	case "all":
-		interactive.DisplayBasicData(bars, "AAPL", timeframe)
-		interactive.DisplayAdvancedData(bars, "AAPL", timeframe)
-		interactive.DisplayAnalyticsData(bars, "AAPL", timeframe)
+		interactive.DisplayBasicData(bars, symbol, timeframe)
+		interactive.DisplayAdvancedData(bars, symbol, timeframe)
+		interactive.DisplayAnalyticsData(bars, symbol, timeframe)
 	}
 
-	fmt.Printf("\n✅ Displayed %d bars for AAPL on %s timeframe\n", len(bars), timeframe)
+	fmt.Printf("\n✅ Displayed %d bars for %s on %s timeframe\n", len(bars), symbol, timeframe)
 
 	balanceChange := account.Equity.Sub(account.LastEquity)
 
 	fmt.Println("Status:", resp.Status, balanceChange)
 
 	// TODO: Add Obsidian export functionality here later
-	fmt.Println("� Obsidian export functionality will be added in future updates")
+	fmt.Println("📝 Obsidian export functionality will be added in future updates")
 }
 
-func testRSI() {
+func testRSI(symbol string, days int, timeframe string) {
 	log.Println("🧪 Testing RSI calculation...")
 
 	// 1. Fetch bars from Alpaca
-	bars, err := datafeed.GetAlpacaBars("AAPL", "1Day", 50)
+	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, days)
 	if err != nil {
 		log.Printf("Failed to fetch data: %v", err)
 		return
@@ -116,7 +127,7 @@ func testRSI() {
 	log.Printf("✅ Fetched %d bars", len(bars))
 
 	// 2. Store them in database
-	err = datafeed.StoreBarsWithAnalytics("AAPL", "1Day", bars)
+	err = datafeed.StoreBarsWithAnalytics(symbol, timeframe, bars)
 	if err != nil {
 		log.Printf("Failed to store bars: %v", err)
 		return
@@ -124,7 +135,7 @@ func testRSI() {
 	log.Println("✅ Stored bars in database")
 
 	// 3. Calculate and store RSI
-	err = strategy.CalculateAndStoreRSI("AAPL", 14)
+	err = strategy.CalculateAndStoreRSI(symbol, 14)
 	if err != nil {
 		log.Printf("Failed to calculate RSI: %v", err)
 		return

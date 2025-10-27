@@ -9,6 +9,11 @@ import (
 	database "github.com/fazecat/mongelmaker/Internal/database/sqlc"
 )
 
+type PricePoint struct {
+	Price     float64
+	Timestamp time.Time
+}
+
 func FetchClosingPrices(symbol string, days int) ([]float64, error) {
 	params := database.GetClosingPricesParams{
 		Symbol: symbol,
@@ -51,4 +56,30 @@ func SaveRSI(symbol string, date string, rsiValue float64) error {
 	}
 
 	return nil
+}
+
+func FetchPricePoints(symbol string, days int) ([]PricePoint, error) {
+	params := database.GetClosingPricesParams{
+		Symbol: symbol,
+		Limit:  int32(days),
+	}
+	ctx := context.Background()
+	rows, err := Queries.GetClosingPrices(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var pricePoints []PricePoint
+	for _, row := range rows {
+		price, err := strconv.ParseFloat(row.ClosePrice, 64)
+		if err != nil {
+			return nil, err
+		}
+		pricePoints = append(pricePoints, PricePoint{
+			Price:     price,
+			Timestamp: row.Timestamp,
+		})
+	}
+
+	return pricePoints, nil
 }
