@@ -68,39 +68,6 @@ CREATE TABLE portfolio_history (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Scout list for potential stocks
-CREATE TABLE scout_list (
-    id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) UNIQUE NOT NULL,
-    reason VARCHAR(255), -- "earnings_catalyst,oversold_rsi,sector_rotation"
-    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    trigger_price DECIMAL(10, 4),
-    trigger_type VARCHAR(10), -- 'ABOVE' or 'BELOW'
-    is_active BOOLEAN DEFAULT TRUE,
-    notes TEXT,
-);
-
--- candle_daily_ for Bollinger Bands
-CREATE TABLE candle_daily_bollinger (
-    id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    calculation_date DATE NOT NULL,
-    time_period INTEGER NOT NULL, -- 30, 90, 365 days
-    average_price DECIMAL(10, 4) NOT NULL,
-    standard_deviation DECIMAL(10, 4) NOT NULL,
-    upper_band DECIMAL(10, 4) NOT NULL,
-    lower_band DECIMAL(10, 4) NOT NULL,
-    current_price DECIMAL(10, 4) NOT NULL,
-    deviation_from_avg DECIMAL(10, 4) NOT NULL
-);
-
-CREATE TABLE rsi_calculation(
-    id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    calculation_date DATE NOT NULL,
-    rsi_value DECIMAL(5, 2) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 
 -- Indexes for better query performance
 CREATE INDEX idx_historical_bars_symbol_timeframe ON historical_bars(symbol, timeframe);

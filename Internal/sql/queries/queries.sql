@@ -18,3 +18,4 @@ FROM rsi_calculation
 WHERE symbol = $1
 ORDER BY calculation_date DESC
 LIMIT 1;
+

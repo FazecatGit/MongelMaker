@@ -51,10 +51,15 @@ func SaveRSI(symbol string, date string, rsiValue float64) error {
 	return nil
 }
 func DetermineRSISignal(rsiValue float64) string {
-	// Placeholder: Determine buy/sell/hold based on RSI value
-	return "hold"
+	if rsiValue < 30 {
+		return "oversold"
+	} else if rsiValue > 70 {
+		return "overbought"
+	}
+	return "neutral"
 }
-func CalculateAndStoreRSI(symbol string) error {
+
+func CalculateAndStoreRSI(symbol string, period int) error {
 	// Placeholder: Fetch closing prices
 	return nil
 }
