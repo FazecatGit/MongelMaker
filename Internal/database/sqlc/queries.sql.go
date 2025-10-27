@@ -15,7 +15,7 @@ SELECT close_price, timestamp
 FROM historical_bars
 WHERE symbol = $1 
   AND timeframe = '1Day'
-ORDER BY timestamp DESC
+ORDER BY timestamp ASC
 LIMIT $2
 `
 

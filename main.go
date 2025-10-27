@@ -8,6 +8,7 @@ import (
 
 	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
+	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 	"github.com/fazecat/mongelmaker/interactive"
 	"github.com/joho/godotenv"
@@ -28,7 +29,7 @@ func main() {
 	// Test the retry logic
 	utils.TestRetryLogic()
 
-		apiKey := os.Getenv("ALPACA_API_KEY")
+	apiKey := os.Getenv("ALPACA_API_KEY")
 	secretKey := os.Getenv("ALPACA_API_SECRET")
 
 	alpclient := alpaca.NewClient(alpaca.ClientOpts{
@@ -58,11 +59,15 @@ func main() {
 		fmt.Println("Error:", err)
 		return
 	}
+	// Test RSI calculation
+	testRSI()
 
-	// Test storage function with user's selected timeframe
-	testStorageFunctionWithTimeframe(timeframe)
+	// Get number of bars to fetch from user
+	var numBars int
+	fmt.Print("How many bars to display? ")
+	fmt.Scan(&numBars)
 
-	bars, err := interactive.FetchMarketData("AAPL", timeframe, 10)
+	bars, err := interactive.FetchMarketData("AAPL", timeframe, numBars)
 	if err != nil {
 		fmt.Println("Error fetching market data:", err)
 		return
@@ -94,45 +99,36 @@ func main() {
 	balanceChange := account.Equity.Sub(account.LastEquity)
 
 	fmt.Println("Status:", resp.Status, balanceChange)
-	
+
 	// TODO: Add Obsidian export functionality here later
 	fmt.Println("� Obsidian export functionality will be added in future updates")
 }
 
-func testStorageFunctionWithTimeframe(selectedTimeframe string) {
-	fmt.Println("\n🔄 Testing StoreBarsWithAnalytics function...")
+func testRSI() {
+	log.Println("🧪 Testing RSI calculation...")
 
-	symbol := "AAPL"
-	fmt.Printf("📊 Fetching multi-timeframe data for %s...\n", symbol)
-
-	data, err := datafeed.FetchAllTimeframes(symbol, selectedTimeframe, 5)
+	// 1. Fetch bars from Alpaca
+	bars, err := datafeed.GetAlpacaBars("AAPL", "1Day", 50)
 	if err != nil {
 		log.Printf("Failed to fetch data: %v", err)
 		return
 	}
+	log.Printf("✅ Fetched %d bars", len(bars))
 
-	// Use the correct data array based on selected timeframe
-	var barsToStore []datafeed.Bar
-	switch selectedTimeframe {
-	case "1Min":
-		barsToStore = data.OneMinData
-	case "5Min":
-		barsToStore = data.FiveMinData
-	case "1Hour":
-		barsToStore = data.OneHourData
-	case "1Day":
-		barsToStore = data.OneDayData
-	default:
-		log.Printf("Unknown timeframe: %s", selectedTimeframe)
-		return
-	}
-
-	fmt.Printf("💾 Storing %d bars of %s data with analytics...\n", len(barsToStore), selectedTimeframe)
-	err = datafeed.StoreBarsWithAnalytics(symbol, selectedTimeframe, barsToStore)
+	// 2. Store them in database
+	err = datafeed.StoreBarsWithAnalytics("AAPL", "1Day", bars)
 	if err != nil {
-		log.Printf("Failed to store %s data: %v", selectedTimeframe, err)
+		log.Printf("Failed to store bars: %v", err)
+		return
+	}
+	log.Println("✅ Stored bars in database")
+
+	// 3. Calculate and store RSI
+	err = strategy.CalculateAndStoreRSI("AAPL", 14)
+	if err != nil {
+		log.Printf("Failed to calculate RSI: %v", err)
 		return
 	}
 
-	fmt.Println("✅ Storage test completed!")
+	log.Println("✅ RSI calculation and storage successful!")
 }

@@ -23,8 +23,9 @@ func GetAlpacaBars(symbol string, timeframe string, limit int) ([]Bar, error) {
 	apiKey := os.Getenv("ALPACA_API_KEY")
 	secretKey := os.Getenv("ALPACA_API_SECRET")
 
+	//change to grab data from dates
 	apiURL := fmt.Sprintf(
-		"https://data.alpaca.markets/v2/stocks/%s/bars?timeframe=%s&limit=%d&start=2025-10-23T09:30:00Z&end=2025-10-23T16:00:00Z",
+		"https://data.alpaca.markets/v2/stocks/%s/bars?timeframe=%s&limit=%d&start=2025-08-01T00:00:00Z",
 		symbol, timeframe, limit,
 	)
 

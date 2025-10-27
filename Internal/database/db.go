@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
+	database "github.com/fazecat/mongelmaker/Internal/database/sqlc"
+	_ "github.com/lib/pq"
 )
 
+var Queries *database.Queries
 var DB *sql.DB
 
 // DatabaseConfig holds database connection configuration
@@ -44,6 +46,7 @@ func InitDatabase() error {
 	if err = DB.Ping(); err != nil {
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
+	Queries = database.New(DB)
 
 	fmt.Println("✅ Database connected successfully!")
 	return nil

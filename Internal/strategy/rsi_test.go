@@ -106,3 +106,25 @@ func TestEdgeCases(t *testing.T) {
 	}
 	t.Log("RSI values for constant prices:", rsi)
 }
+
+func TestRSIMultipleValues(t *testing.T) {
+	// Simple test data
+	closes := []float64{100, 102, 101, 103, 102, 104, 103, 105, 104, 106, 105, 107, 106, 108, 107}
+	period := 5
+
+	rsi, err := CalculateRSI(closes, period)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that RSI values CHANGE over time
+	firstRSI := rsi[period]
+	lastRSI := rsi[len(rsi)-1]
+
+	if firstRSI == lastRSI {
+		t.Errorf("RSI should vary! Got same value %.2f for all positions", firstRSI)
+	}
+
+	// Log all RSI values to see the progression
+	t.Logf("RSI values: %v", rsi[period:])
+}
