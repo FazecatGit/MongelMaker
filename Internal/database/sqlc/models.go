@@ -9,6 +9,14 @@ import (
 	"time"
 )
 
+type AtrCalculation struct {
+	ID              int32        `json:"id"`
+	Symbol          string       `json:"symbol"`
+	CalculationDate time.Time    `json:"calculation_date"`
+	AtrValue        string       `json:"atr_value"`
+	CreatedAt       sql.NullTime `json:"created_at"`
+}
+
 type CandleDailyBollinger struct {
 	ID                int32     `json:"id"`
 	Symbol            string    `json:"symbol"`

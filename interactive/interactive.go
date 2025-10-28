@@ -8,7 +8,6 @@ import (
 
 func ShowTimeframeMenu() (string, error) {
 	fmt.Println("Choose timeframe:")
-	fmt.Println("Choose timeframe:")
 	fmt.Println("1.  1 Minute")
 	fmt.Println("2.  3 Minutes")
 	fmt.Println("3.  5 Minutes")

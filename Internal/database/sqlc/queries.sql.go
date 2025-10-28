@@ -10,6 +10,75 @@ import (
 	"time"
 )
 
+const getATR = `-- name: GetATR :one
+SELECT atr_value, calculation_date
+FROM atr_calculation
+WHERE symbol = $1
+ORDER BY calculation_date DESC
+LIMIT 1
+`
+
+type GetATRRow struct {
+	AtrValue        string    `json:"atr_value"`
+	CalculationDate time.Time `json:"calculation_date"`
+}
+
+func (q *Queries) GetATR(ctx context.Context, symbol string) (GetATRRow, error) {
+	row := q.db.QueryRowContext(ctx, getATR, symbol)
+	var i GetATRRow
+	err := row.Scan(&i.AtrValue, &i.CalculationDate)
+	return i, err
+}
+
+const getATRPrices = `-- name: GetATRPrices :many
+SELECT high_price, low_price, close_price, timestamp
+FROM historical_bars
+WHERE symbol = $1 
+  AND timeframe = '1Day'
+ORDER BY timestamp ASC
+LIMIT $2
+`
+
+type GetATRPricesParams struct {
+	Symbol string `json:"symbol"`
+	Limit  int32  `json:"limit"`
+}
+
+type GetATRPricesRow struct {
+	HighPrice  string    `json:"high_price"`
+	LowPrice   string    `json:"low_price"`
+	ClosePrice string    `json:"close_price"`
+	Timestamp  time.Time `json:"timestamp"`
+}
+
+func (q *Queries) GetATRPrices(ctx context.Context, arg GetATRPricesParams) ([]GetATRPricesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getATRPrices, arg.Symbol, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetATRPricesRow
+	for rows.Next() {
+		var i GetATRPricesRow
+		if err := rows.Scan(
+			&i.HighPrice,
+			&i.LowPrice,
+			&i.ClosePrice,
+			&i.Timestamp,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getClosingPrices = `-- name: GetClosingPrices :many
 SELECT close_price, timestamp
 FROM historical_bars
@@ -70,6 +139,24 @@ func (q *Queries) GetLatestRSI(ctx context.Context, symbol string) (GetLatestRSI
 	var i GetLatestRSIRow
 	err := row.Scan(&i.RsiValue, &i.CalculationDate)
 	return i, err
+}
+
+const saveATR = `-- name: SaveATR :exec
+INSERT INTO atr_calculation (symbol, calculation_date, atr_value)
+VALUES ($1, $2, $3)
+ON CONFLICT (symbol, calculation_date)
+DO UPDATE SET atr_value = EXCLUDED.atr_value
+`
+
+type SaveATRParams struct {
+	Symbol          string    `json:"symbol"`
+	CalculationDate time.Time `json:"calculation_date"`
+	AtrValue        string    `json:"atr_value"`
+}
+
+func (q *Queries) SaveATR(ctx context.Context, arg SaveATRParams) error {
+	_, err := q.db.ExecContext(ctx, saveATR, arg.Symbol, arg.CalculationDate, arg.AtrValue)
+	return err
 }
 
 const saveRSI = `-- name: SaveRSI :exec
