@@ -83,7 +83,7 @@ func TestCalculateAndStoreRSI(t *testing.T) {
 	defer datafeed.CloseDatabase()
 
 	symbol := "AAPL"
-	err = CalculateAndStoreRSI(symbol, 14)
+	err = CalculateAndStoreRSI(symbol, 14, "1Day")
 	if err != nil {
 		t.Errorf("CalculateAndStoreRSI() error = %v", err)
 	}

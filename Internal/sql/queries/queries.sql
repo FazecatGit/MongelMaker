@@ -2,9 +2,9 @@
 SELECT close_price, timestamp
 FROM historical_bars
 WHERE symbol = $1 
-  AND timeframe = '1Day'
+  AND timeframe = $2
 ORDER BY timestamp ASC
-LIMIT $2;
+LIMIT $3;
 
 -- name: SaveRSI :exec
 INSERT INTO rsi_calculation (symbol, calculation_date, rsi_value)
@@ -23,9 +23,9 @@ LIMIT 1;
 SELECT high_price, low_price, close_price, timestamp
 FROM historical_bars
 WHERE symbol = $1 
-  AND timeframe = '1Day'
+  AND timeframe = $2
 ORDER BY timestamp ASC
-LIMIT $2;
+LIMIT $3;
 
 -- name: GetATR :one
 SELECT atr_value, calculation_date
@@ -39,3 +39,17 @@ INSERT INTO atr_calculation (symbol, calculation_date, atr_value)
 VALUES ($1, $2, $3)
 ON CONFLICT (symbol, calculation_date)
 DO UPDATE SET atr_value = EXCLUDED.atr_value;
+
+-- name: GetRSIForDateRange :many
+SELECT calculation_date, rsi_value
+FROM rsi_calculation
+WHERE symbol = $1
+ORDER BY calculation_date DESC
+LIMIT $2;
+
+-- name: GetATRForDateRange :many
+SELECT calculation_date, atr_value
+FROM atr_calculation
+WHERE symbol = $1
+ORDER BY calculation_date DESC
+LIMIT $2;

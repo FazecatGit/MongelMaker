@@ -14,10 +14,11 @@ type PricePoint struct {
 	Timestamp time.Time
 }
 
-func FetchClosingPrices(symbol string, days int) ([]float64, error) {
+func FetchClosingPrices(symbol string, days int, timeframe string) ([]float64, error) {
 	params := database.GetClosingPricesParams{
-		Symbol: symbol,
-		Limit:  int32(days),
+		Symbol:    symbol,
+		Timeframe: timeframe,
+		Limit:     int32(days),
 	}
 
 	ctx := context.Background()
@@ -58,10 +59,11 @@ func SaveRSI(symbol string, date string, rsiValue float64) error {
 	return nil
 }
 
-func FetchPricePoints(symbol string, days int) ([]PricePoint, error) {
+func FetchPricePoints(symbol string, days int, timeframe string) ([]PricePoint, error) {
 	params := database.GetClosingPricesParams{
-		Symbol: symbol,
-		Limit:  int32(days),
+		Symbol:    symbol,
+		Timeframe: timeframe,
+		Limit:     int32(days),
 	}
 	ctx := context.Background()
 	rows, err := Queries.GetClosingPrices(ctx, params)
@@ -82,4 +84,24 @@ func FetchPricePoints(symbol string, days int) ([]PricePoint, error) {
 	}
 
 	return pricePoints, nil
+}
+
+func FetchRSIForDisplay(symbol string, limit int) (map[string]float64, error) {
+	params := database.GetRSIForDateRangeParams{
+		Symbol: symbol,
+		Limit:  int32(limit),
+	}
+	ctx := context.Background()
+	rows, err := Queries.GetRSIForDateRange(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	rsiMap := make(map[string]float64)
+	for _, row := range rows {
+		dateStr := row.CalculationDate.Format("2006-01-02")
+		rsiVal, _ := strconv.ParseFloat(row.RsiValue, 64)
+		rsiMap[dateStr] = rsiVal
+	}
+	return rsiMap, nil
 }

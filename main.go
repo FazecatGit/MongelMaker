@@ -59,7 +59,6 @@ func main() {
 		fmt.Println("Error:", err)
 		return
 	}
-	// Test RSI calculation
 
 	// Get number of days from user
 	var days int
@@ -71,7 +70,8 @@ func main() {
 	fmt.Print("\nEnter stock symbol to analyze (e.g., AAPL, TSLA, MSFT): ")
 	fmt.Scan(&symbol)
 
-	testRSI(symbol, days, timeframe)
+	// Test the indicators of RSI and ATR
+	testIndicators(symbol, days, timeframe)
 
 	// Get number of bars to fetch from user
 	var numBars int
@@ -115,10 +115,10 @@ func main() {
 	fmt.Println("📝 Obsidian export functionality will be added in future updates")
 }
 
-func testRSI(symbol string, days int, timeframe string) {
-	log.Println("🧪 Testing RSI calculation...")
+func testIndicators(symbol string, days int, timeframe string) {
+	log.Println("🧪 Testing RSI and ATR calculations...")
 
-	// 1. Fetch bars from Alpaca
+	// Fetch bars from Alpaca
 	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, days)
 	if err != nil {
 		log.Printf("Failed to fetch data: %v", err)
@@ -126,7 +126,7 @@ func testRSI(symbol string, days int, timeframe string) {
 	}
 	log.Printf("✅ Fetched %d bars", len(bars))
 
-	// 2. Store them in database
+	// Store them in database
 	err = datafeed.StoreBarsWithAnalytics(symbol, timeframe, bars)
 	if err != nil {
 		log.Printf("Failed to store bars: %v", err)
@@ -134,12 +134,40 @@ func testRSI(symbol string, days int, timeframe string) {
 	}
 	log.Println("✅ Stored bars in database")
 
-	// 3. Calculate and store RSI
-	err = strategy.CalculateAndStoreRSI(symbol, 14)
+	// Calculate limit based on timeframe (approximate bars per day)
+	var calcLimit int
+	switch timeframe {
+	case "1Min":
+		calcLimit = days * 390 // 390 minutes
+	case "5Min":
+		calcLimit = days * 78 // 390 / 5
+	case "10Min":
+		calcLimit = days * 39 // 390 / 10
+	case "15Min":
+		calcLimit = days * 26 // 390 / 15
+	case "30Min":
+		calcLimit = days * 13 // 390 / 30
+	case "1Hour":
+		calcLimit = days * 7 // ~6.5 hours per day
+	case "1Day":
+		calcLimit = days // 1 bar per day
+	default:
+		calcLimit = days * 10
+	}
+
+	// Calculate and store RSI
+	err = strategy.CalculateAndStoreRSI(symbol, 14, timeframe, calcLimit)
 	if err != nil {
 		log.Printf("Failed to calculate RSI: %v", err)
 		return
 	}
-
 	log.Println("✅ RSI calculation and storage successful!")
+
+	// Calculate and store ATR
+	err = strategy.CalculateAndStoreATR(symbol, 14, timeframe, calcLimit)
+	if err != nil {
+		log.Printf("Failed to calculate ATR: %v", err)
+		return
+	}
+	log.Println("✅ ATR calculation and storage successful!")
 }

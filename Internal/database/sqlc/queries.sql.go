@@ -30,18 +30,60 @@ func (q *Queries) GetATR(ctx context.Context, symbol string) (GetATRRow, error) 
 	return i, err
 }
 
+const getATRForDateRange = `-- name: GetATRForDateRange :many
+SELECT calculation_date, atr_value
+FROM atr_calculation
+WHERE symbol = $1
+ORDER BY calculation_date DESC
+LIMIT $2
+`
+
+type GetATRForDateRangeParams struct {
+	Symbol string `json:"symbol"`
+	Limit  int32  `json:"limit"`
+}
+
+type GetATRForDateRangeRow struct {
+	CalculationDate time.Time `json:"calculation_date"`
+	AtrValue        string    `json:"atr_value"`
+}
+
+func (q *Queries) GetATRForDateRange(ctx context.Context, arg GetATRForDateRangeParams) ([]GetATRForDateRangeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getATRForDateRange, arg.Symbol, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetATRForDateRangeRow
+	for rows.Next() {
+		var i GetATRForDateRangeRow
+		if err := rows.Scan(&i.CalculationDate, &i.AtrValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getATRPrices = `-- name: GetATRPrices :many
 SELECT high_price, low_price, close_price, timestamp
 FROM historical_bars
 WHERE symbol = $1 
-  AND timeframe = '1Day'
+  AND timeframe = $2
 ORDER BY timestamp ASC
-LIMIT $2
+LIMIT $3
 `
 
 type GetATRPricesParams struct {
-	Symbol string `json:"symbol"`
-	Limit  int32  `json:"limit"`
+	Symbol    string `json:"symbol"`
+	Timeframe string `json:"timeframe"`
+	Limit     int32  `json:"limit"`
 }
 
 type GetATRPricesRow struct {
@@ -52,7 +94,7 @@ type GetATRPricesRow struct {
 }
 
 func (q *Queries) GetATRPrices(ctx context.Context, arg GetATRPricesParams) ([]GetATRPricesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getATRPrices, arg.Symbol, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, getATRPrices, arg.Symbol, arg.Timeframe, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -83,14 +125,15 @@ const getClosingPrices = `-- name: GetClosingPrices :many
 SELECT close_price, timestamp
 FROM historical_bars
 WHERE symbol = $1 
-  AND timeframe = '1Day'
+  AND timeframe = $2
 ORDER BY timestamp ASC
-LIMIT $2
+LIMIT $3
 `
 
 type GetClosingPricesParams struct {
-	Symbol string `json:"symbol"`
-	Limit  int32  `json:"limit"`
+	Symbol    string `json:"symbol"`
+	Timeframe string `json:"timeframe"`
+	Limit     int32  `json:"limit"`
 }
 
 type GetClosingPricesRow struct {
@@ -99,7 +142,7 @@ type GetClosingPricesRow struct {
 }
 
 func (q *Queries) GetClosingPrices(ctx context.Context, arg GetClosingPricesParams) ([]GetClosingPricesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getClosingPrices, arg.Symbol, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, getClosingPrices, arg.Symbol, arg.Timeframe, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +182,47 @@ func (q *Queries) GetLatestRSI(ctx context.Context, symbol string) (GetLatestRSI
 	var i GetLatestRSIRow
 	err := row.Scan(&i.RsiValue, &i.CalculationDate)
 	return i, err
+}
+
+const getRSIForDateRange = `-- name: GetRSIForDateRange :many
+SELECT calculation_date, rsi_value
+FROM rsi_calculation
+WHERE symbol = $1
+ORDER BY calculation_date DESC
+LIMIT $2
+`
+
+type GetRSIForDateRangeParams struct {
+	Symbol string `json:"symbol"`
+	Limit  int32  `json:"limit"`
+}
+
+type GetRSIForDateRangeRow struct {
+	CalculationDate time.Time `json:"calculation_date"`
+	RsiValue        string    `json:"rsi_value"`
+}
+
+func (q *Queries) GetRSIForDateRange(ctx context.Context, arg GetRSIForDateRangeParams) ([]GetRSIForDateRangeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRSIForDateRange, arg.Symbol, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRSIForDateRangeRow
+	for rows.Next() {
+		var i GetRSIForDateRangeRow
+		if err := rows.Scan(&i.CalculationDate, &i.RsiValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const saveATR = `-- name: SaveATR :exec

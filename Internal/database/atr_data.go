@@ -20,10 +20,11 @@ type ATRBar struct {
 	Timestamp time.Time
 }
 
-func FetchATRPrices(symbol string, limit int) ([]ATRBar, error) {
+func FetchATRPrices(symbol string, limit int, timeframe string) ([]ATRBar, error) {
 	params := database.GetATRPricesParams{
-		Symbol: symbol,
-		Limit:  int32(limit),
+		Symbol:    symbol,
+		Timeframe: timeframe,
+		Limit:     int32(limit),
 	}
 	ctx := context.Background()
 	rows, err := Queries.GetATRPrices(ctx, params)
@@ -77,4 +78,24 @@ func SaveATR(symbol string, date string, atrValue float64) error {
 	}
 
 	return nil
+}
+
+func FetchATRForDisplay(symbol string, limit int) (map[string]float64, error) {
+	params := database.GetATRForDateRangeParams{
+		Symbol: symbol,
+		Limit:  int32(limit),
+	}
+	ctx := context.Background()
+	rows, err := Queries.GetATRForDateRange(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	atrMap := make(map[string]float64)
+	for _, row := range rows {
+		dateStr := row.CalculationDate.Format("2006-01-02")
+		atrVal, _ := strconv.ParseFloat(row.AtrValue, 64)
+		atrMap[dateStr] = atrVal
+	}
+	return atrMap, nil
 }

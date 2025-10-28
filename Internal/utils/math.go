@@ -24,3 +24,28 @@ func Abs(value float64) float64 {
 	}
 	return value
 }
+
+func Max(values ...float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	max := values[0]
+	for _, v := range values {
+		if v > max {
+			max = v
+		}
+	}
+	return max
+}
+func Min(values ...float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	min := values[0]
+	for _, v := range values {
+		if v < min {
+			min = v
+		}
+	}
+	return min
+}

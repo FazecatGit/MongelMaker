@@ -91,14 +91,49 @@ func DisplayAdvancedData(bars []datafeed.Bar, symbol string, timeframe string) {
 
 func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string) {
 	fmt.Printf("\n📈 Analytics Data for %s (%s)\n", symbol, timeframe)
-	fmt.Println("Timestamp           | Close Price | Price Change | Change % | Volume")
-	fmt.Println("--------------------|-------------|--------------|----------|----------")
+
+	// Fetch RSI and ATR data
+	rsiMap, err := datafeed.FetchRSIForDisplay(symbol, len(bars))
+	if err != nil {
+		fmt.Printf("⚠️  Could not fetch RSI data: %v\n", err)
+		rsiMap = make(map[string]float64)
+	}
+
+	atrMap, err := datafeed.FetchATRForDisplay(symbol, len(bars))
+	if err != nil {
+		fmt.Printf("⚠️  Could not fetch ATR data: %v\n", err)
+		atrMap = make(map[string]float64)
+	}
+
+	fmt.Println("Date       | Close Price | Price Chg | Chg %  | Volume   | RSI    | ATR   ")
+	fmt.Println("-----------|-------------|-----------|--------|----------|--------|-------")
 
 	for _, bar := range bars {
 		priceChange := bar.Close - bar.Open
 		priceChangePercent := (bar.Close - bar.Open) / bar.Open * 100
-		fmt.Printf("%-20s | %11.2f | %11.2f | %9.2f | %8d\n",
-			bar.Timestamp, bar.Close, priceChange, priceChangePercent, bar.Volume)
+
+		// Extract date from timestamp
+		dateStr := bar.Timestamp
+		if len(dateStr) > 10 {
+			dateStr = dateStr[:10]
+		}
+
+		// Get RSI and ATR for current date
+		rsiVal, hasRSI := rsiMap[dateStr]
+		atrVal, hasATR := atrMap[dateStr]
+
+		rsiStr := "  -   "
+		if hasRSI {
+			rsiStr = fmt.Sprintf("%6.2f", rsiVal)
+		}
+
+		atrStr := "  -   "
+		if hasATR {
+			atrStr = fmt.Sprintf("%6.2f", atrVal)
+		}
+
+		fmt.Printf("%-10s | %11.2f | %9.2f | %6.2f | %8d | %s | %s\n",
+			dateStr, bar.Close, priceChange, priceChangePercent, bar.Volume, rsiStr, atrStr)
 	}
 }
 

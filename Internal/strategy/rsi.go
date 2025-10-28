@@ -55,8 +55,8 @@ func DetermineRSISignal(rsiValue float64) string {
 	return "neutral"
 }
 
-func CalculateAndStoreRSI(symbol string, period int) error {
-	pricePoints, err := datafeed.FetchPricePoints(symbol, period*3)
+func CalculateAndStoreRSI(symbol string, period int, timeframe string, limit int) error {
+	pricePoints, err := datafeed.FetchPricePoints(symbol, limit, timeframe)
 	if err != nil {
 		return fmt.Errorf("failed to fetch price points: %w", err)
 	}
@@ -70,7 +70,6 @@ func CalculateAndStoreRSI(symbol string, period int) error {
 	if err != nil {
 		return fmt.Errorf("failed to calculate RSI: %w", err)
 	}
-	defer datafeed.CloseDatabase()
 
 	for i := period; i < len(pricePoints); i++ {
 		err = datafeed.SaveRSI(symbol,
