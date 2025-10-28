@@ -50,8 +50,7 @@ func CalculateAndStoreATR(symbol string, period int, timeframe string, limit int
 	savedCount := 0
 	for i, atrValue := range atrValues {
 		if atrValue != 0 {
-			date := atrBars[i].Timestamp.Format("2006-01-02")
-			err := datafeed.SaveATR(symbol, date, atrValue)
+			err := datafeed.SaveATR(symbol, atrBars[i].Timestamp, atrValue)
 			if err != nil {
 				return err
 			}
@@ -71,6 +70,7 @@ func CalculateAndStoreATR(symbol string, period int, timeframe string, limit int
 	return nil
 }
 
+// Will do later
 func DetermineATRSignal(atrValue float64, threshold float64) string {
 	if atrValue > threshold {
 		return "high volatility"

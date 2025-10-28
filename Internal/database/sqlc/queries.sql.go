@@ -11,30 +11,73 @@ import (
 )
 
 const getATR = `-- name: GetATR :one
-SELECT atr_value, calculation_date
+SELECT atr_value, calculation_timestamp
 FROM atr_calculation
 WHERE symbol = $1
-ORDER BY calculation_date DESC
+ORDER BY calculation_timestamp DESC
 LIMIT 1
 `
 
 type GetATRRow struct {
-	AtrValue        string    `json:"atr_value"`
-	CalculationDate time.Time `json:"calculation_date"`
+	AtrValue             string    `json:"atr_value"`
+	CalculationTimestamp time.Time `json:"calculation_timestamp"`
 }
 
 func (q *Queries) GetATR(ctx context.Context, symbol string) (GetATRRow, error) {
 	row := q.db.QueryRowContext(ctx, getATR, symbol)
 	var i GetATRRow
-	err := row.Scan(&i.AtrValue, &i.CalculationDate)
+	err := row.Scan(&i.AtrValue, &i.CalculationTimestamp)
 	return i, err
 }
 
-const getATRForDateRange = `-- name: GetATRForDateRange :many
-SELECT calculation_date, atr_value
+const getATRByTimestampRange = `-- name: GetATRByTimestampRange :many
+SELECT calculation_timestamp, atr_value
 FROM atr_calculation
 WHERE symbol = $1
-ORDER BY calculation_date DESC
+  AND calculation_timestamp >= $2
+  AND calculation_timestamp <= $3
+ORDER BY calculation_timestamp ASC
+`
+
+type GetATRByTimestampRangeParams struct {
+	Symbol                 string    `json:"symbol"`
+	CalculationTimestamp   time.Time `json:"calculation_timestamp"`
+	CalculationTimestamp_2 time.Time `json:"calculation_timestamp_2"`
+}
+
+type GetATRByTimestampRangeRow struct {
+	CalculationTimestamp time.Time `json:"calculation_timestamp"`
+	AtrValue             string    `json:"atr_value"`
+}
+
+func (q *Queries) GetATRByTimestampRange(ctx context.Context, arg GetATRByTimestampRangeParams) ([]GetATRByTimestampRangeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getATRByTimestampRange, arg.Symbol, arg.CalculationTimestamp, arg.CalculationTimestamp_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetATRByTimestampRangeRow
+	for rows.Next() {
+		var i GetATRByTimestampRangeRow
+		if err := rows.Scan(&i.CalculationTimestamp, &i.AtrValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getATRForDateRange = `-- name: GetATRForDateRange :many
+SELECT calculation_timestamp, atr_value
+FROM atr_calculation
+WHERE symbol = $1
+ORDER BY calculation_timestamp DESC
 LIMIT $2
 `
 
@@ -44,8 +87,8 @@ type GetATRForDateRangeParams struct {
 }
 
 type GetATRForDateRangeRow struct {
-	CalculationDate time.Time `json:"calculation_date"`
-	AtrValue        string    `json:"atr_value"`
+	CalculationTimestamp time.Time `json:"calculation_timestamp"`
+	AtrValue             string    `json:"atr_value"`
 }
 
 func (q *Queries) GetATRForDateRange(ctx context.Context, arg GetATRForDateRangeParams) ([]GetATRForDateRangeRow, error) {
@@ -57,7 +100,7 @@ func (q *Queries) GetATRForDateRange(ctx context.Context, arg GetATRForDateRange
 	var items []GetATRForDateRangeRow
 	for rows.Next() {
 		var i GetATRForDateRangeRow
-		if err := rows.Scan(&i.CalculationDate, &i.AtrValue); err != nil {
+		if err := rows.Scan(&i.CalculationTimestamp, &i.AtrValue); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -165,30 +208,73 @@ func (q *Queries) GetClosingPrices(ctx context.Context, arg GetClosingPricesPara
 }
 
 const getLatestRSI = `-- name: GetLatestRSI :one
-SELECT rsi_value, calculation_date
+SELECT rsi_value, calculation_timestamp
 FROM rsi_calculation
 WHERE symbol = $1
-ORDER BY calculation_date DESC
+ORDER BY calculation_timestamp DESC
 LIMIT 1
 `
 
 type GetLatestRSIRow struct {
-	RsiValue        string    `json:"rsi_value"`
-	CalculationDate time.Time `json:"calculation_date"`
+	RsiValue             string    `json:"rsi_value"`
+	CalculationTimestamp time.Time `json:"calculation_timestamp"`
 }
 
 func (q *Queries) GetLatestRSI(ctx context.Context, symbol string) (GetLatestRSIRow, error) {
 	row := q.db.QueryRowContext(ctx, getLatestRSI, symbol)
 	var i GetLatestRSIRow
-	err := row.Scan(&i.RsiValue, &i.CalculationDate)
+	err := row.Scan(&i.RsiValue, &i.CalculationTimestamp)
 	return i, err
 }
 
-const getRSIForDateRange = `-- name: GetRSIForDateRange :many
-SELECT calculation_date, rsi_value
+const getRSIByTimestampRange = `-- name: GetRSIByTimestampRange :many
+SELECT calculation_timestamp, rsi_value
 FROM rsi_calculation
 WHERE symbol = $1
-ORDER BY calculation_date DESC
+  AND calculation_timestamp >= $2
+  AND calculation_timestamp <= $3
+ORDER BY calculation_timestamp ASC
+`
+
+type GetRSIByTimestampRangeParams struct {
+	Symbol                 string    `json:"symbol"`
+	CalculationTimestamp   time.Time `json:"calculation_timestamp"`
+	CalculationTimestamp_2 time.Time `json:"calculation_timestamp_2"`
+}
+
+type GetRSIByTimestampRangeRow struct {
+	CalculationTimestamp time.Time `json:"calculation_timestamp"`
+	RsiValue             string    `json:"rsi_value"`
+}
+
+func (q *Queries) GetRSIByTimestampRange(ctx context.Context, arg GetRSIByTimestampRangeParams) ([]GetRSIByTimestampRangeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRSIByTimestampRange, arg.Symbol, arg.CalculationTimestamp, arg.CalculationTimestamp_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRSIByTimestampRangeRow
+	for rows.Next() {
+		var i GetRSIByTimestampRangeRow
+		if err := rows.Scan(&i.CalculationTimestamp, &i.RsiValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRSIForDateRange = `-- name: GetRSIForDateRange :many
+SELECT calculation_timestamp, rsi_value
+FROM rsi_calculation
+WHERE symbol = $1
+ORDER BY calculation_timestamp DESC
 LIMIT $2
 `
 
@@ -198,8 +284,8 @@ type GetRSIForDateRangeParams struct {
 }
 
 type GetRSIForDateRangeRow struct {
-	CalculationDate time.Time `json:"calculation_date"`
-	RsiValue        string    `json:"rsi_value"`
+	CalculationTimestamp time.Time `json:"calculation_timestamp"`
+	RsiValue             string    `json:"rsi_value"`
 }
 
 func (q *Queries) GetRSIForDateRange(ctx context.Context, arg GetRSIForDateRangeParams) ([]GetRSIForDateRangeRow, error) {
@@ -211,7 +297,7 @@ func (q *Queries) GetRSIForDateRange(ctx context.Context, arg GetRSIForDateRange
 	var items []GetRSIForDateRangeRow
 	for rows.Next() {
 		var i GetRSIForDateRangeRow
-		if err := rows.Scan(&i.CalculationDate, &i.RsiValue); err != nil {
+		if err := rows.Scan(&i.CalculationTimestamp, &i.RsiValue); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -226,37 +312,37 @@ func (q *Queries) GetRSIForDateRange(ctx context.Context, arg GetRSIForDateRange
 }
 
 const saveATR = `-- name: SaveATR :exec
-INSERT INTO atr_calculation (symbol, calculation_date, atr_value)
+INSERT INTO atr_calculation (symbol, calculation_timestamp, atr_value)
 VALUES ($1, $2, $3)
-ON CONFLICT (symbol, calculation_date)
+ON CONFLICT (symbol, calculation_timestamp)
 DO UPDATE SET atr_value = EXCLUDED.atr_value
 `
 
 type SaveATRParams struct {
-	Symbol          string    `json:"symbol"`
-	CalculationDate time.Time `json:"calculation_date"`
-	AtrValue        string    `json:"atr_value"`
+	Symbol               string    `json:"symbol"`
+	CalculationTimestamp time.Time `json:"calculation_timestamp"`
+	AtrValue             string    `json:"atr_value"`
 }
 
 func (q *Queries) SaveATR(ctx context.Context, arg SaveATRParams) error {
-	_, err := q.db.ExecContext(ctx, saveATR, arg.Symbol, arg.CalculationDate, arg.AtrValue)
+	_, err := q.db.ExecContext(ctx, saveATR, arg.Symbol, arg.CalculationTimestamp, arg.AtrValue)
 	return err
 }
 
 const saveRSI = `-- name: SaveRSI :exec
-INSERT INTO rsi_calculation (symbol, calculation_date, rsi_value)
+INSERT INTO rsi_calculation (symbol, calculation_timestamp, rsi_value)
 VALUES ($1, $2, $3)
-ON CONFLICT (symbol, calculation_date)
+ON CONFLICT (symbol, calculation_timestamp)
 DO UPDATE SET rsi_value = EXCLUDED.rsi_value
 `
 
 type SaveRSIParams struct {
-	Symbol          string    `json:"symbol"`
-	CalculationDate time.Time `json:"calculation_date"`
-	RsiValue        string    `json:"rsi_value"`
+	Symbol               string    `json:"symbol"`
+	CalculationTimestamp time.Time `json:"calculation_timestamp"`
+	RsiValue             string    `json:"rsi_value"`
 }
 
 func (q *Queries) SaveRSI(ctx context.Context, arg SaveRSIParams) error {
-	_, err := q.db.ExecContext(ctx, saveRSI, arg.Symbol, arg.CalculationDate, arg.RsiValue)
+	_, err := q.db.ExecContext(ctx, saveRSI, arg.Symbol, arg.CalculationTimestamp, arg.RsiValue)
 	return err
 }

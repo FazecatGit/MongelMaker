@@ -73,11 +73,11 @@ func CalculateAndStoreRSI(symbol string, period int, timeframe string, limit int
 
 	for i := period; i < len(pricePoints); i++ {
 		err = datafeed.SaveRSI(symbol,
-			pricePoints[i].Timestamp.Format("2006-01-02"),
+			pricePoints[i].Timestamp,
 			rsiValues[i])
 		if err != nil {
-			return fmt.Errorf("failed to save RSI for date %s: %w",
-				pricePoints[i].Timestamp.Format("2006-01-02"), err)
+			return fmt.Errorf("failed to save RSI for timestamp %s: %w",
+				pricePoints[i].Timestamp.Format("2006-01-02 15:04:05"), err)
 		}
 	}
 

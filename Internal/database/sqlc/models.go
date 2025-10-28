@@ -10,11 +10,11 @@ import (
 )
 
 type AtrCalculation struct {
-	ID              int32        `json:"id"`
-	Symbol          string       `json:"symbol"`
-	CalculationDate time.Time    `json:"calculation_date"`
-	AtrValue        string       `json:"atr_value"`
-	CreatedAt       sql.NullTime `json:"created_at"`
+	ID                   int32        `json:"id"`
+	Symbol               string       `json:"symbol"`
+	CalculationTimestamp time.Time    `json:"calculation_timestamp"`
+	AtrValue             string       `json:"atr_value"`
+	CreatedAt            sql.NullTime `json:"created_at"`
 }
 
 type CandleDailyBollinger struct {
@@ -102,11 +102,11 @@ type Position struct {
 }
 
 type RsiCalculation struct {
-	ID              int32        `json:"id"`
-	Symbol          string       `json:"symbol"`
-	CalculationDate time.Time    `json:"calculation_date"`
-	RsiValue        string       `json:"rsi_value"`
-	CreatedAt       sql.NullTime `json:"created_at"`
+	ID                   int32        `json:"id"`
+	Symbol               string       `json:"symbol"`
+	CalculationTimestamp time.Time    `json:"calculation_timestamp"`
+	RsiValue             string       `json:"rsi_value"`
+	CreatedAt            sql.NullTime `json:"created_at"`
 }
 
 type ScoutList struct {

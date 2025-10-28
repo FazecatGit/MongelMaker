@@ -13,7 +13,6 @@ ALTER TABLE rsi_calculation
   ADD CONSTRAINT rsi_calculation_symbol_timestamp_key 
   UNIQUE (symbol, calculation_timestamp);
 
--- Modify atr_calculation to use timestamp instead of date
 ALTER TABLE atr_calculation 
   DROP CONSTRAINT atr_calculation_symbol_calculation_date_key;
 

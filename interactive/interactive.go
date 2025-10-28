@@ -2,6 +2,7 @@ package interactive
 
 import (
 	"fmt"
+	"time"
 
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 )
@@ -92,17 +93,50 @@ func DisplayAdvancedData(bars []datafeed.Bar, symbol string, timeframe string) {
 func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string) {
 	fmt.Printf("\n📈 Analytics Data for %s (%s)\n", symbol, timeframe)
 
-	// Fetch RSI and ATR data
-	rsiMap, err := datafeed.FetchRSIForDisplay(symbol, len(bars))
-	if err != nil {
-		fmt.Printf("⚠️  Could not fetch RSI data: %v\n", err)
-		rsiMap = make(map[string]float64)
+	// Determine the timestamp range
+	var startTime, endTime time.Time
+	if len(bars) > 0 {
+		firstBar, err := time.Parse(time.RFC3339, bars[0].Timestamp)
+		if err == nil {
+			startTime = firstBar
+		}
+		lastBar, err := time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
+		if err == nil {
+			endTime = lastBar
+		}
 	}
 
-	atrMap, err := datafeed.FetchATRForDisplay(symbol, len(bars))
-	if err != nil {
-		fmt.Printf("⚠️  Could not fetch ATR data: %v\n", err)
-		atrMap = make(map[string]float64)
+	// Fetch RSI and ATR data
+	var rsiMap map[string]float64
+	var atrMap map[string]float64
+	var err error
+
+	if !startTime.IsZero() && !endTime.IsZero() {
+		rsiMap, err = datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
+		if err != nil {
+			fmt.Printf("⚠️  Could not fetch RSI data: %v\n", err)
+			rsiMap = make(map[string]float64)
+		}
+
+		atrMap, err = datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
+		if err != nil {
+			fmt.Printf("⚠️  Could not fetch ATR data: %v\n", err)
+			atrMap = make(map[string]float64)
+		}
+	} else {
+		// Fallback
+		fetchLimit := len(bars) * 10
+		rsiMap, err = datafeed.FetchRSIForDisplay(symbol, fetchLimit)
+		if err != nil {
+			fmt.Printf("⚠️  Could not fetch RSI data: %v\n", err)
+			rsiMap = make(map[string]float64)
+		}
+
+		atrMap, err = datafeed.FetchATRForDisplay(symbol, fetchLimit)
+		if err != nil {
+			fmt.Printf("⚠️  Could not fetch ATR data: %v\n", err)
+			atrMap = make(map[string]float64)
+		}
 	}
 
 	fmt.Println("Date       | Close Price | Price Chg | Chg %  | Volume   | RSI    | ATR   ")
@@ -112,15 +146,17 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string) 
 		priceChange := bar.Close - bar.Open
 		priceChangePercent := (bar.Close - bar.Open) / bar.Open * 100
 
-		// Extract date from timestamp
-		dateStr := bar.Timestamp
-		if len(dateStr) > 10 {
-			dateStr = dateStr[:10]
+		t, err := time.Parse(time.RFC3339, bar.Timestamp)
+		var timestampStr string
+		if err == nil {
+			timestampStr = t.Format("2006-01-02 15:04:05")
+		} else {
+			timestampStr = bar.Timestamp
 		}
 
-		// Get RSI and ATR for current date
-		rsiVal, hasRSI := rsiMap[dateStr]
-		atrVal, hasATR := atrMap[dateStr]
+		// Get RSI and ATR for current timestamp
+		rsiVal, hasRSI := rsiMap[timestampStr]
+		atrVal, hasATR := atrMap[timestampStr]
 
 		rsiStr := "  -   "
 		if hasRSI {
@@ -130,6 +166,12 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string) 
 		atrStr := "  -   "
 		if hasATR {
 			atrStr = fmt.Sprintf("%6.2f", atrVal)
+		}
+
+		// Extract date
+		dateStr := bar.Timestamp
+		if len(dateStr) > 10 {
+			dateStr = dateStr[:10]
 		}
 
 		fmt.Printf("%-10s | %11.2f | %9.2f | %6.2f | %8d | %s | %s\n",
