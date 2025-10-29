@@ -4,11 +4,13 @@ import (
 	"fmt"
 )
 
+//a lot of redudant code might remove it later
+
 type Signal struct {
 	symbol       string
 	currentPrice float64
 	SMA          float64
-	Action       string // "BUY", "SELL", "HOLD"
+	Action       string
 }
 
 type MultiTimeframeData struct {
@@ -27,6 +29,7 @@ func GetCurrentPrice(symbol string) (float64, error) {
 	return Quote.Price, nil
 }
 
+// visit later
 func FetchAllTimeframes(symbol string, timeframe string, limit int) (*MultiTimeframeData, error) {
 
 	limitbars, err := GetAlpacaBars(symbol, timeframe, limit)
@@ -60,6 +63,7 @@ func FetchAllTimeframes(symbol string, timeframe string, limit int) (*MultiTimef
 	}, nil
 }
 
+// visit later
 func calculateSMA(bars []Bar) float64 {
 	if len(bars) == 0 {
 		return 0
@@ -71,6 +75,7 @@ func calculateSMA(bars []Bar) float64 {
 	return sum / float64(len(bars))
 }
 
+// visit later
 func GenerateSignal(symbol string) (*Signal, error) {
 	// Fetch current price
 	currentPrice, err := GetCurrentPrice(symbol)

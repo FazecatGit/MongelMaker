@@ -6,6 +6,7 @@ import (
 
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
+	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
 func ShowTimeframeMenu() (string, error) {
@@ -140,8 +141,8 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 		}
 	}
 
-	fmt.Println("Timestamp           | Close Price | Price Chg | Chg %  | Volume   | RSI    | ATR    | Signals")
-	fmt.Println("--------------------|-------------|-----------|--------|----------|--------|--------|------------------")
+	fmt.Println("Timestamp           | Close Price | Price Chg | Chg %  | Volume   | RSI    | ATR    | B/U Ratio | B/L Ratio | Analysis                  | Signals             ")
+	fmt.Println("--------------------|-------------|-----------|--------|----------|--------|--------|-----------|-----------|--------------------------|---------------------")
 
 	for _, bar := range bars {
 		priceChange := bar.Close - bar.Open
@@ -178,6 +179,18 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 			atrStr = fmt.Sprintf("%6.2f", atrVal)
 		}
 
+		// Calculate Body-to-Wick ratios and analysis
+		candle := utils.Candlestick{
+			Open:  bar.Open,
+			Close: bar.Close,
+			High:  bar.High,
+			Low:   bar.Low,
+		}
+		metrics, results := utils.AnalyzeCandlestick(candle)
+		bodyToUpperStr := fmt.Sprintf("%9.2f", metrics["BodyToUpper"])
+		bodyToLowerStr := fmt.Sprintf("%9.2f", metrics["BodyToLower"])
+		analysisStr := results["Analysis"]
+
 		// Determine signals
 		signalStr := ""
 		if hasRSI {
@@ -213,8 +226,8 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 			signalStr = "-"
 		}
 
-		fmt.Printf("%-20s | %11.2f | %9.2f | %6.2f | %8d | %s | %s | %s\n",
-			displayTimestamp, bar.Close, priceChange, priceChangePercent, bar.Volume, rsiStr, atrStr, signalStr)
+		fmt.Printf("%-20s | %11.2f | %9.2f | %6.2f | %8d | %6s | %6s | %9s | %9s | %-25s | %-20s\n",
+			displayTimestamp, bar.Close, priceChange, priceChangePercent, bar.Volume, rsiStr, atrStr, bodyToUpperStr, bodyToLowerStr, analysisStr, signalStr)
 	}
 }
 
