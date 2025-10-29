@@ -60,11 +60,11 @@ func TestCalculateTrueRangeWithGaps(t *testing.T) {
 		expected  float64
 	}{
 		// Gap up
-		{high: 18.0, low: 14.0, prevClose: 10.0, expected: 8.0}, // 18-10=8
+		{high: 18.0, low: 14.0, prevClose: 10.0, expected: 8.0},
 		// Gap down
-		{high: 12.0, low: 8.0, prevClose: 15.0, expected: 7.0}, // 15-8=7
+		{high: 12.0, low: 8.0, prevClose: 15.0, expected: 7.0},
 		// No gap
-		{high: 16.0, low: 12.0, prevClose: 14.0, expected: 4.0}, // 16-12=4
+		{high: 16.0, low: 12.0, prevClose: 14.0, expected: 4.0},
 	}
 	for _, tt := range tests {
 		tr := CalculateTrueRange(tt.high, tt.low, tt.prevClose)

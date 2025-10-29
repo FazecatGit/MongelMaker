@@ -5,6 +5,7 @@ import (
 	"time"
 
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
+	"github.com/fazecat/mongelmaker/Internal/strategy"
 )
 
 func ShowTimeframeMenu() (string, error) {
@@ -90,8 +91,8 @@ func DisplayAdvancedData(bars []datafeed.Bar, symbol string, timeframe string) {
 	}
 }
 
-func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string) {
-	fmt.Printf("\n📈 Analytics Data for %s (%s)\n", symbol, timeframe)
+func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, tz *time.Location) {
+	fmt.Printf("\n📈 Analytics Data for %s (%s) - Timezone: %s\n", symbol, timeframe, tz.String())
 
 	// Determine the timestamp range
 	var startTime, endTime time.Time
@@ -139,19 +140,28 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string) 
 		}
 	}
 
-	fmt.Println("Date       | Close Price | Price Chg | Chg %  | Volume   | RSI    | ATR   ")
-	fmt.Println("-----------|-------------|-----------|--------|----------|--------|-------")
+	fmt.Println("Timestamp           | Close Price | Price Chg | Chg %  | Volume   | RSI    | ATR    | Signals")
+	fmt.Println("--------------------|-------------|-----------|--------|----------|--------|--------|------------------")
 
 	for _, bar := range bars {
 		priceChange := bar.Close - bar.Open
 		priceChangePercent := (bar.Close - bar.Open) / bar.Open * 100
 
 		t, err := time.Parse(time.RFC3339, bar.Timestamp)
+		if err != nil {
+			fmt.Printf("⚠️  Could not parse timestamp: %v\n", err)
+		}
+
 		var timestampStr string
+		var displayTimestamp string
+
 		if err == nil {
+			localTime := t.In(tz)
+			displayTimestamp = localTime.Format("2006-01-02 15:04:05")
 			timestampStr = t.Format("2006-01-02 15:04:05")
 		} else {
 			timestampStr = bar.Timestamp
+			displayTimestamp = bar.Timestamp
 		}
 
 		// Get RSI and ATR for current timestamp
@@ -168,14 +178,43 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string) 
 			atrStr = fmt.Sprintf("%6.2f", atrVal)
 		}
 
-		// Extract date
-		dateStr := bar.Timestamp
-		if len(dateStr) > 10 {
-			dateStr = dateStr[:10]
+		// Determine signals
+		signalStr := ""
+		if hasRSI {
+			rsiSignal := strategy.DetermineRSISignal(rsiVal)
+			switch rsiSignal {
+			case "overbought":
+				signalStr += "📈 Overbought"
+			case "oversold":
+				signalStr += "📉 Oversold"
+			case "neutral":
+				signalStr += "➡️  Neutral"
+			}
 		}
 
-		fmt.Printf("%-10s | %11.2f | %9.2f | %6.2f | %8d | %s | %s\n",
-			dateStr, bar.Close, priceChange, priceChangePercent, bar.Volume, rsiStr, atrStr)
+		if hasATR {
+			// Calculate ATR threshold dynamically
+			atrThreshold := bar.Close * 0.01
+			atrSignal := strategy.DetermineATRSignal(atrVal, atrThreshold)
+
+			if signalStr != "" {
+				signalStr += " | "
+			}
+
+			switch atrSignal {
+			case "high volatility":
+				signalStr += "⚡ High Vol"
+			case "low volatility":
+				signalStr += "❄️  Low Vol"
+			}
+		}
+
+		if signalStr == "" {
+			signalStr = "-"
+		}
+
+		fmt.Printf("%-20s | %11.2f | %9.2f | %6.2f | %8d | %s | %s | %s\n",
+			displayTimestamp, bar.Close, priceChange, priceChangePercent, bar.Volume, rsiStr, atrStr, signalStr)
 	}
 }
 
@@ -207,4 +246,47 @@ func ShowDisplayMenu() (string, error) {
 		fmt.Println("Invalid choice.")
 	}
 	return "", fmt.Errorf("invalid choice")
+}
+
+func ShowTimezoneMenu() (*time.Location, error) {
+	nyLocation, _ := time.LoadLocation("America/New_York")
+	chicagoLocation, _ := time.LoadLocation("America/Chicago")
+	laLocation, _ := time.LoadLocation("America/Los_Angeles")
+	londonLocation, _ := time.LoadLocation("Europe/London")
+	tokyoLocation, _ := time.LoadLocation("Asia/Tokyo")
+	hkLocation, _ := time.LoadLocation("Asia/Hong_Kong")
+
+	timezones := map[int]struct {
+		name     string
+		location *time.Location
+	}{
+		1: {"UTC", time.UTC},
+		2: {"America/New_York (NYSE/NASDAQ)", nyLocation},
+		3: {"America/Chicago (CME)", chicagoLocation},
+		4: {"America/Los_Angeles (PST)", laLocation},
+		5: {"Europe/London (LSE)", londonLocation},
+		6: {"Asia/Tokyo (TSE)", tokyoLocation},
+		7: {"Asia/Hong_Kong (HKEX)", hkLocation},
+		8: {"Local (System Time)", time.Local},
+	}
+
+	fmt.Println("\nChoose timezone:")
+	for i := 1; i <= len(timezones); i++ {
+		fmt.Printf("%d. %s\n", i, timezones[i].name)
+	}
+
+	fmt.Print("Enter choice: ")
+	var choice int
+	_, err := fmt.Scan(&choice)
+	if err != nil {
+		fmt.Println("Invalid input. Please enter a valid number.")
+		return nil, err
+	}
+
+	if tz, exists := timezones[choice]; exists {
+		return tz.location, nil
+	} else {
+		fmt.Println("Invalid choice. Defaulting to UTC.")
+		return time.UTC, nil
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
@@ -60,23 +61,18 @@ func main() {
 		return
 	}
 
-	// Get number of days from user
-	var days int
-	fmt.Print("How many days of history to analyze (recommended: 30-90): ")
-	fmt.Scan(&days)
-
 	// Get Stock Symbol from User
 	var symbol string
 	fmt.Print("\nEnter stock symbol to analyze (e.g., AAPL, TSLA, MSFT): ")
 	fmt.Scan(&symbol)
 
-	// Test the indicators of RSI and ATR
-	testIndicators(symbol, days, timeframe)
-
-	// Get number of bars to fetch from user
+	// Get number of bars to fetch/analyze from user
 	var numBars int
-	fmt.Print("How many bars to display? ")
+	fmt.Print("\nHow many bars to fetch and analyze?: ")
 	fmt.Scan(&numBars)
+
+	// Calculate indicators and fetch data
+	testIndicators(symbol, numBars, timeframe)
 
 	bars, err := interactive.FetchMarketData(symbol, timeframe, numBars)
 	if err != nil {
@@ -91,6 +87,13 @@ func main() {
 		return
 	}
 
+	// Get user's timezone preference
+	timezone, err := interactive.ShowTimezoneMenu()
+	if err != nil {
+		fmt.Println("Error selecting timezone, using UTC:", err)
+		timezone = time.UTC
+	}
+
 	// Call the appropriate display function based on choice
 	switch displayChoice {
 	case "basic":
@@ -98,11 +101,11 @@ func main() {
 	case "full":
 		interactive.DisplayAdvancedData(bars, symbol, timeframe)
 	case "analytics":
-		interactive.DisplayAnalyticsData(bars, symbol, timeframe)
+		interactive.DisplayAnalyticsData(bars, symbol, timeframe, timezone)
 	case "all":
 		interactive.DisplayBasicData(bars, symbol, timeframe)
 		interactive.DisplayAdvancedData(bars, symbol, timeframe)
-		interactive.DisplayAnalyticsData(bars, symbol, timeframe)
+		interactive.DisplayAnalyticsData(bars, symbol, timeframe, timezone)
 	}
 
 	fmt.Printf("\n✅ Displayed %d bars for %s on %s timeframe\n", len(bars), symbol, timeframe)
@@ -115,11 +118,11 @@ func main() {
 	fmt.Println("📝 Obsidian export functionality will be added in future updates")
 }
 
-func testIndicators(symbol string, days int, timeframe string) {
-	log.Println("🧪 Testing RSI and ATR calculations...")
+func testIndicators(symbol string, numBars int, timeframe string) {
+	log.Println("🧪 Calculating RSI and ATR indicators...")
 
 	// Fetch bars from Alpaca
-	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, days)
+	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, numBars)
 	if err != nil {
 		log.Printf("Failed to fetch data: %v", err)
 		return
@@ -134,29 +137,8 @@ func testIndicators(symbol string, days int, timeframe string) {
 	}
 	log.Println("✅ Stored bars in database")
 
-	// Calculate limit based on timeframe (approximate bars per day)
-	var calcLimit int
-	switch timeframe {
-	case "1Min":
-		calcLimit = days * 390 // 390 minutes
-	case "5Min":
-		calcLimit = days * 78 // 390 / 5
-	case "10Min":
-		calcLimit = days * 39 // 390 / 10
-	case "15Min":
-		calcLimit = days * 26 // 390 / 15
-	case "30Min":
-		calcLimit = days * 13 // 390 / 30
-	case "1Hour":
-		calcLimit = days * 7 // ~6.5 hours per day
-	case "1Day":
-		calcLimit = days // 1 bar per day
-	default:
-		calcLimit = days * 10
-	}
-
 	// Calculate and store RSI
-	err = strategy.CalculateAndStoreRSI(symbol, 14, timeframe, calcLimit)
+	err = strategy.CalculateAndStoreRSI(symbol, 14, timeframe, numBars)
 	if err != nil {
 		log.Printf("Failed to calculate RSI: %v", err)
 		return
@@ -164,7 +146,7 @@ func testIndicators(symbol string, days int, timeframe string) {
 	log.Println("✅ RSI calculation and storage successful!")
 
 	// Calculate and store ATR
-	err = strategy.CalculateAndStoreATR(symbol, 14, timeframe, calcLimit)
+	err = strategy.CalculateAndStoreATR(symbol, 14, timeframe, numBars)
 	if err != nil {
 		log.Printf("Failed to calculate ATR: %v", err)
 		return
