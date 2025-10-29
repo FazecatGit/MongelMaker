@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/fazecat/mongelmaker/Internal/utils"
 )
@@ -19,14 +20,20 @@ type Bar struct {
 	Volume    int64   `json:"v"`
 }
 
-func GetAlpacaBars(symbol string, timeframe string, limit int) ([]Bar, error) {
+func GetAlpacaBars(symbol string, timeframe string, limit int, startDate string) ([]Bar, error) {
 	apiKey := os.Getenv("ALPACA_API_KEY")
 	secretKey := os.Getenv("ALPACA_API_SECRET")
 
-	//change to grab data from dates
+	// Adjust startDate logic to ensure a valid range
+	if startDate == "" {
+		// Default to 90 days ago in UTC if no startDate is provided
+		startDate = time.Now().UTC().AddDate(0, 0, -90).Format(time.RFC3339)
+	}
+
+	// Build the API URL dynamically based on the presence of startDate
 	apiURL := fmt.Sprintf(
-		"https://data.alpaca.markets/v2/stocks/%s/bars?timeframe=%s&limit=%d&start=2025-08-01T00:00:00Z",
-		symbol, timeframe, limit,
+		"https://data.alpaca.markets/v2/stocks/%s/bars?timeframe=%s&limit=%d&start=%s",
+		symbol, timeframe, limit, startDate,
 	)
 
 	fmt.Printf("🔗 API Request: %s\n", apiURL)

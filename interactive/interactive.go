@@ -59,14 +59,25 @@ func ShowTimeframeMenu() (string, error) {
 	}
 }
 
-func FetchMarketData(symbol string, timeframe string, limit int) ([]datafeed.Bar, error) {
+func FetchMarketData(symbol string, timeframe string, limit int, startDate string) ([]datafeed.Bar, error) {
 	if timeframe == "" {
 		return nil, fmt.Errorf("timeframe cannot be empty")
 	}
-	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, limit)
+
+	// fetch enough bars for RSI/ATR calculations
+	if limit < 14 {
+		limit = 14
+	}
+
+	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, limit, startDate)
 	if err != nil {
 		return nil, err
 	}
+
+	if len(bars) < 14 {
+		return nil, fmt.Errorf("not enough data to calculate RSI/ATR: fetched %d bars, need at least 14", len(bars))
+	}
+
 	return bars, nil
 }
 
@@ -95,7 +106,6 @@ func DisplayAdvancedData(bars []datafeed.Bar, symbol string, timeframe string) {
 func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, tz *time.Location) {
 	fmt.Printf("\n📈 Analytics Data for %s (%s) - Timezone: %s\n", symbol, timeframe, tz.String())
 
-	// Determine the timestamp range
 	var startTime, endTime time.Time
 	if len(bars) > 0 {
 		firstBar, err := time.Parse(time.RFC3339, bars[0].Timestamp)
@@ -191,7 +201,7 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 		bodyToLowerStr := fmt.Sprintf("%9.2f", metrics["BodyToLower"])
 		analysisStr := results["Analysis"]
 
-		// Determine signals
+		// visualize signals
 		signalStr := ""
 		if hasRSI {
 			rsiSignal := strategy.DetermineRSISignal(rsiVal)

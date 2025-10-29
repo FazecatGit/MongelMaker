@@ -15,7 +15,6 @@ import (
 )
 
 func main() {
-	// Load environment variables
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -74,20 +73,18 @@ func main() {
 	// Calculate indicators and fetch data
 	testIndicators(symbol, numBars, timeframe)
 
-	bars, err := interactive.FetchMarketData(symbol, timeframe, numBars)
+	bars, err := interactive.FetchMarketData(symbol, timeframe, numBars, "")
 	if err != nil {
 		fmt.Println("Error fetching market data:", err)
 		return
 	}
 
-	// Get user's display preference
 	displayChoice, err := interactive.ShowDisplayMenu()
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	// Get user's timezone preference
 	timezone, err := interactive.ShowTimezoneMenu()
 	if err != nil {
 		fmt.Println("Error selecting timezone, using UTC:", err)
@@ -113,23 +110,18 @@ func main() {
 	balanceChange := account.Equity.Sub(account.LastEquity)
 
 	fmt.Println("Status:", resp.Status, balanceChange)
-
-	// TODO: Add Obsidian export functionality here later
-	fmt.Println("📝 Obsidian export functionality will be added in future updates")
 }
 
 func testIndicators(symbol string, numBars int, timeframe string) {
 	log.Println("🧪 Calculating RSI and ATR indicators...")
 
-	// Fetch bars from Alpaca
-	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, numBars)
+	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, numBars, "")
 	if err != nil {
 		log.Printf("Failed to fetch data: %v", err)
 		return
 	}
 	log.Printf("✅ Fetched %d bars", len(bars))
 
-	// Store them in database
 	err = datafeed.StoreBarsWithAnalytics(symbol, timeframe, bars)
 	if err != nil {
 		log.Printf("Failed to store bars: %v", err)
@@ -137,7 +129,6 @@ func testIndicators(symbol string, numBars int, timeframe string) {
 	}
 	log.Println("✅ Stored bars in database")
 
-	// Calculate and store RSI
 	err = strategy.CalculateAndStoreRSI(symbol, 14, timeframe, numBars)
 	if err != nil {
 		log.Printf("Failed to calculate RSI: %v", err)
@@ -145,7 +136,6 @@ func testIndicators(symbol string, numBars int, timeframe string) {
 	}
 	log.Println("✅ RSI calculation and storage successful!")
 
-	// Calculate and store ATR
 	err = strategy.CalculateAndStoreATR(symbol, 14, timeframe, numBars)
 	if err != nil {
 		log.Printf("Failed to calculate ATR: %v", err)

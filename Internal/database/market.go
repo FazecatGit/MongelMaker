@@ -32,25 +32,25 @@ func GetCurrentPrice(symbol string) (float64, error) {
 // visit later
 func FetchAllTimeframes(symbol string, timeframe string, limit int) (*MultiTimeframeData, error) {
 
-	limitbars, err := GetAlpacaBars(symbol, timeframe, limit)
+	limitbars, err := GetAlpacaBars(symbol, timeframe, limit, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get historical data for %s: %w", symbol, err)
 	}
-	oneminutebars, err := GetAlpacaBars(symbol, "1Min", 100)
+	oneminutebars, err := GetAlpacaBars(symbol, "1Min", 100, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get 1Min bars for %s: %w", symbol, err)
 	}
-	fiveminutebars, err := GetAlpacaBars(symbol, "5Min", 100)
+	fiveminutebars, err := GetAlpacaBars(symbol, "5Min", 100, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get 5Min bars for %s: %w", symbol, err)
 	}
 
-	onehourbars, err := GetAlpacaBars(symbol, "1Hour", 100)
+	onehourbars, err := GetAlpacaBars(symbol, "1Hour", 100, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get 1Hour bars for %s: %w", symbol, err)
 	}
 
-	onedaybars, err := GetAlpacaBars(symbol, "1Day", 100)
+	onedaybars, err := GetAlpacaBars(symbol, "1Day", 100, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get 1Day bars for %s: %w", symbol, err)
 	}
