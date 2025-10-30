@@ -5,6 +5,7 @@ import (
 	"time"
 
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
+	"github.com/fazecat/mongelmaker/Internal/export"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 )
@@ -118,7 +119,6 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 		}
 	}
 
-	// Fetch RSI and ATR data
 	var rsiMap map[string]float64
 	var atrMap map[string]float64
 	var err error
@@ -247,12 +247,13 @@ func ShowDisplayMenu() (string, error) {
 	fmt.Println("2. Full OHLC")
 	fmt.Println("3. Analytics")
 	fmt.Println("4. All Data")
+	fmt.Println("5. Export Data")
 
 	fmt.Print("Enter choice: ")
 	var choice int
 	_, err := fmt.Scan(&choice)
 	if err != nil {
-		fmt.Println("Invalid input. Please enter a number between 1 and 4.")
+		fmt.Println("Invalid input. Please enter a number between 1 and 5.")
 		return "", err
 	}
 
@@ -265,6 +266,8 @@ func ShowDisplayMenu() (string, error) {
 		return "analytics", nil
 	case 4:
 		return "all", nil
+	case 5:
+		return "export", nil
 	default:
 		fmt.Println("Invalid choice.")
 	}
@@ -312,4 +315,90 @@ func ShowTimezoneMenu() (*time.Location, error) {
 		fmt.Println("Invalid choice. Defaulting to UTC.")
 		return time.UTC, nil
 	}
+}
+
+func PrepareExportData(bars []datafeed.Bar, symbol string, timezone *time.Location) []export.ExportRecord {
+	var records []export.ExportRecord
+
+	var rsiMap map[string]float64
+	var atrMap map[string]float64
+
+	var startTime, endTime time.Time
+	if len(bars) > 0 {
+		if t, err := time.Parse(time.RFC3339, bars[0].Timestamp); err == nil {
+			startTime = t
+		}
+		if t, err := time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp); err == nil {
+			endTime = t
+		}
+	}
+
+	if !startTime.IsZero() && !endTime.IsZero() {
+		rsiMap, _ = datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
+		atrMap, _ = datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
+	} else {
+		fetchLimit := len(bars) * 10
+		rsiMap, _ = datafeed.FetchRSIForDisplay(symbol, fetchLimit)
+		atrMap, _ = datafeed.FetchATRForDisplay(symbol, fetchLimit)
+	}
+
+	for _, bar := range bars {
+		t, _ := time.Parse(time.RFC3339, bar.Timestamp)
+		timestampStr := t.In(timezone).Format("2006-01-02 15:04:05")
+
+		rsiVal, hasRSI := rsiMap[t.Format("2006-01-02 15:04:05")]
+		atrVal, hasATR := atrMap[t.Format("2006-01-02 15:04:05")]
+
+		var rsiPtr *float64
+		if hasRSI {
+			rsiPtr = &rsiVal
+		}
+		var atrPtr *float64
+		if hasATR {
+			atrPtr = &atrVal
+		}
+
+		candle := utils.Candlestick{Open: bar.Open, Close: bar.Close, High: bar.High, Low: bar.Low}
+		_, results := utils.AnalyzeCandlestick(candle)
+		analysis := results["Analysis"]
+
+		var signals []string
+		if hasRSI {
+			rsiSignal := strategy.DetermineRSISignal(rsiVal)
+			switch rsiSignal {
+			case "overbought":
+				signals = append(signals, "Overbought")
+			case "oversold":
+				signals = append(signals, "Oversold")
+			case "neutral":
+				signals = append(signals, "Neutral")
+			}
+		}
+		if hasATR {
+			atrThreshold := bar.Close * 0.01
+			atrSignal := strategy.DetermineATRSignal(atrVal, atrThreshold)
+			switch atrSignal {
+			case "high volatility":
+				signals = append(signals, "High Vol")
+			case "low volatility":
+				signals = append(signals, "Low Vol")
+			}
+		}
+
+		record := export.ExportRecord{
+			Timestamp: timestampStr,
+			Open:      bar.Open,
+			High:      bar.High,
+			Low:       bar.Low,
+			Close:     bar.Close,
+			Volume:    bar.Volume,
+			RSI:       rsiPtr,
+			ATR:       atrPtr,
+			Analysis:  analysis,
+			Signals:   signals,
+		}
+		records = append(records, record)
+	}
+
+	return records
 }

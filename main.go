@@ -9,6 +9,7 @@ import (
 
 	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
+	"github.com/fazecat/mongelmaker/Internal/export"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/interactive"
 	"github.com/joho/godotenv"
@@ -103,6 +104,20 @@ func main() {
 		interactive.DisplayBasicData(bars, symbol, timeframe)
 		interactive.DisplayAdvancedData(bars, symbol, timeframe)
 		interactive.DisplayAnalyticsData(bars, symbol, timeframe, timezone)
+	case "export":
+		records := interactive.PrepareExportData(bars, symbol, timezone)
+		var format string
+		fmt.Print("Enter export format (csv or json): ")
+		fmt.Scan(&format)
+		var filename string
+		fmt.Print("Enter filename (e.g., data.csv): ")
+		fmt.Scan(&filename)
+		err := export.ExportData(format, filename, records)
+		if err != nil {
+			fmt.Printf("Export failed: %v\n", err)
+		} else {
+			fmt.Printf("✅ Exported to exported_data/%s\n", filename)
+		}
 	}
 
 	fmt.Printf("\n✅ Displayed %d bars for %s on %s timeframe\n", len(bars), symbol, timeframe)

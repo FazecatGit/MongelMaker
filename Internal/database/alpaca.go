@@ -24,13 +24,11 @@ func GetAlpacaBars(symbol string, timeframe string, limit int, startDate string)
 	apiKey := os.Getenv("ALPACA_API_KEY")
 	secretKey := os.Getenv("ALPACA_API_SECRET")
 
-	// Adjust startDate logic to ensure a valid range
 	if startDate == "" {
-		// Default to 90 days ago in UTC if no startDate is provided
+		// Default to 90 days
 		startDate = time.Now().UTC().AddDate(0, 0, -90).Format(time.RFC3339)
 	}
 
-	// Build the API URL dynamically based on the presence of startDate
 	apiURL := fmt.Sprintf(
 		"https://data.alpaca.markets/v2/stocks/%s/bars?timeframe=%s&limit=%d&start=%s",
 		symbol, timeframe, limit, startDate,
