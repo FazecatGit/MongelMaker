@@ -8,17 +8,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/fazecat/mongelmaker/Internal/types"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
-type Bar struct {
-	Timestamp string  `json:"t"`
-	Open      float64 `json:"o"`
-	High      float64 `json:"h"`
-	Low       float64 `json:"l"`
-	Close     float64 `json:"c"`
-	Volume    int64   `json:"v"`
-}
+type Bar = types.Bar
 
 func GetAlpacaBars(symbol string, timeframe string, limit int, startDate string) ([]Bar, error) {
 	apiKey := os.Getenv("ALPACA_API_KEY")

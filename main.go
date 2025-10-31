@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
@@ -117,6 +118,39 @@ func main() {
 			fmt.Printf("Export failed: %v\n", err)
 		} else {
 			fmt.Printf("✅ Exported to exported_data/%s\n", filename)
+		}
+	case "screener":
+		fmt.Println("🕵️  Stock Screener")
+		fmt.Print("Enter number of bars to analyze (e.g., 50): ")
+		var numBars int
+		fmt.Scan(&numBars)
+		if numBars < 14 {
+			numBars = 14
+		}
+		symbols := strategy.GetPopularStocks()[:10] // Top 10 for demo
+		fmt.Printf("Screening %d popular stocks...\n", len(symbols))
+		results, err := strategy.ScreenStocks(symbols, timeframe, numBars, strategy.DefaultScreenerCriteria())
+		if err != nil {
+			fmt.Printf("Screener failed: %v\n", err)
+		} else {
+			fmt.Println("\n📈 Screener Results (Top Matches):")
+			fmt.Println("Symbol | Score | RSI  | ATR  | Signals")
+			fmt.Println("-------|-------|------|------|--------")
+			for _, res := range results[:10] { // Show top 10
+				rsiStr := "-"
+				if res.RSI != nil {
+					rsiStr = fmt.Sprintf("%.1f", *res.RSI)
+				}
+				atrStr := "-"
+				if res.ATR != nil {
+					atrStr = fmt.Sprintf("%.2f", *res.ATR)
+				}
+				signals := strings.Join(res.Signals, ", ")
+				if len(signals) > 30 {
+					signals = signals[:27] + "..."
+				}
+				fmt.Printf("%-6s | %5.1f | %4s | %4s | %s\n", res.Symbol, res.Score, rsiStr, atrStr, signals)
+			}
 		}
 	}
 
