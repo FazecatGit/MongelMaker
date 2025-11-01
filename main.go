@@ -56,23 +56,75 @@ func main() {
 	}
 	defer resp.Body.Close()
 
+	// Show main menu
+	mainChoice, err := interactive.ShowMainMenu()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	// Show timeframe menu
 	timeframe, err := interactive.ShowTimeframeMenu()
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	// Get Stock Symbol from User
-	var symbol string
-	fmt.Print("\nEnter stock symbol to analyze (e.g., AAPL, TSLA, MSFT): ")
-	fmt.Scan(&symbol)
-
 	// Get number of bars to fetch/analyze from user
 	var numBars int
 	fmt.Print("\nHow many bars to fetch and analyze?: ")
 	fmt.Scan(&numBars)
 
-	// Calculate indicators and fetch data
+	var symbol string
+
+	// Handle single vs screener path
+	if mainChoice == "single" {
+		fmt.Print("\nEnter stock symbol to analyze (e.g., AAPL, TSLA, MSFT): ")
+		fmt.Scan(&symbol)
+	} else if mainChoice == "screener" {
+		fmt.Println("\n🕵️  Stock Screener")
+		symbols := strategy.GetPopularStocks()[:50] // Top 50 stocks
+		fmt.Printf("Screening %d popular stocks...\n", len(symbols))
+		results, err := strategy.ScreenStocks(symbols, timeframe, numBars, strategy.DefaultScreenerCriteria())
+		if err != nil {
+			fmt.Printf("Screener failed: %v\n", err)
+			return
+		}
+
+		if len(results) == 0 {
+			fmt.Println("❌ No stocks matched the screener criteria. Try a different timeframe or number of bars.")
+			return
+		}
+
+		// Display screener results
+		fmt.Println("\n📈 Screener Results (Top Matches):")
+		fmt.Println("Symbol | Score | RSI  | ATR  | Signals")
+		fmt.Println("-------|-------|------|------|--------")
+		for _, res := range results {
+			rsiStr := "-"
+			if res.RSI != nil {
+				rsiStr = fmt.Sprintf("%.1f", *res.RSI)
+			}
+			atrStr := "-"
+			if res.ATR != nil {
+				atrStr = fmt.Sprintf("%.2f", *res.ATR)
+			}
+			signals := strings.Join(res.Signals, ", ")
+			if len(signals) > 30 {
+				signals = signals[:27] + "..."
+			}
+			fmt.Printf("%-6s | %5.1f | %4s | %4s | %s\n", res.Symbol, res.Score, rsiStr, atrStr, signals)
+		}
+
+		// Let user pick a stock from results
+		symbol, err = interactive.PickStockFromResults(results)
+		if err != nil {
+			fmt.Println("Error picking stock:", err)
+			return
+		}
+	}
+
+	// Calculate indicators and fetch data for chosen symbol
 	testIndicators(symbol, numBars, timeframe)
 
 	bars, err := interactive.FetchMarketData(symbol, timeframe, numBars, "")
@@ -81,6 +133,7 @@ func main() {
 		return
 	}
 
+	// Show display menu
 	displayChoice, err := interactive.ShowDisplayMenu()
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -119,42 +172,11 @@ func main() {
 		} else {
 			fmt.Printf("✅ Exported to exported_data/%s\n", filename)
 		}
-	case "screener":
-		fmt.Println("🕵️  Stock Screener")
-		fmt.Print("Enter number of bars to analyze (e.g., 50): ")
-		var numBars int
-		fmt.Scan(&numBars)
-		if numBars < 14 {
-			numBars = 14
-		}
-		symbols := strategy.GetPopularStocks()[:10] // Top 10 for demo
-		fmt.Printf("Screening %d popular stocks...\n", len(symbols))
-		results, err := strategy.ScreenStocks(symbols, timeframe, numBars, strategy.DefaultScreenerCriteria())
-		if err != nil {
-			fmt.Printf("Screener failed: %v\n", err)
-		} else {
-			fmt.Println("\n📈 Screener Results (Top Matches):")
-			fmt.Println("Symbol | Score | RSI  | ATR  | Signals")
-			fmt.Println("-------|-------|------|------|--------")
-			for _, res := range results[:10] { // Show top 10
-				rsiStr := "-"
-				if res.RSI != nil {
-					rsiStr = fmt.Sprintf("%.1f", *res.RSI)
-				}
-				atrStr := "-"
-				if res.ATR != nil {
-					atrStr = fmt.Sprintf("%.2f", *res.ATR)
-				}
-				signals := strings.Join(res.Signals, ", ")
-				if len(signals) > 30 {
-					signals = signals[:27] + "..."
-				}
-				fmt.Printf("%-6s | %5.1f | %4s | %4s | %s\n", res.Symbol, res.Score, rsiStr, atrStr, signals)
-			}
-		}
+	default:
+		fmt.Println("Invalid display choice.")
 	}
 
-	fmt.Printf("\n✅ Displayed %d bars for %s on %s timeframe\n", len(bars), symbol, timeframe)
+	fmt.Printf("\n✅ Analyzed %d bars for %s on %s timeframe\n", len(bars), symbol, timeframe)
 
 	balanceChange := account.Equity.Sub(account.LastEquity)
 

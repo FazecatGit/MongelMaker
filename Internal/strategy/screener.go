@@ -11,11 +11,10 @@ import (
 )
 
 type ScreenerCriteria struct {
-	MinRSI            float64 // Minimum RSI for oversold (e.g., < 30)
-	MaxRSI            float64 // Maximum RSI for overbought
-	MinATR            float64 // Minimum ATR for volatility
-	MinVolumeRatio    float64 // Minimum volume ratio vs average
-	MinLowerWickRatio float64 // Minimum lower wick / body ratio for buying pressure
+	MinOversoldRSI float64 // RSI threshold for oversold condition (e.g., 30)
+	MaxRSI         float64 // Maximum RSI for overbought
+	MinATR         float64 // Minimum ATR for volatility
+	MinVolumeRatio float64 // Minimum volume ratio vs average
 }
 
 type StockScore struct {
@@ -28,11 +27,10 @@ type StockScore struct {
 
 func DefaultScreenerCriteria() ScreenerCriteria {
 	return ScreenerCriteria{
-		MinRSI:            0,   // No min, but we'll check < 30
-		MaxRSI:            70,  // Avoid overbought
-		MinATR:            0.5, // Some volatility
-		MinVolumeRatio:    1.2, // 20% above average
-		MinLowerWickRatio: 1.5, // Lower wick at least 1.5x body
+		MinOversoldRSI: 30,  // RSI < 30 indicates oversold
+		MaxRSI:         70,  // Avoid overbought
+		MinATR:         0.5, // Some volatility
+		MinVolumeRatio: 1.2, // 20% above average
 	}
 }
 
@@ -44,6 +42,11 @@ func ScreenStocks(symbols []string, timeframe string, numBars int, criteria Scre
 		score, signals, rsi, atr, err := scoreStock(symbol, timeframe, numBars, criteria)
 		if err != nil {
 			log.Printf("Error screening %s: %v", symbol, err)
+			continue
+		}
+		// Skip stocks with no signals (score 0 and no data)
+		if score == 0 && len(signals) == 0 {
+			log.Printf("Skipping %s: no tradeable signals", symbol)
 			continue
 		}
 		results = append(results, StockScore{
@@ -70,42 +73,38 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		return 0, nil, nil, nil, err
 	}
 	if len(bars) < 14 {
-		return 0, nil, nil, nil, fmt.Errorf("insufficient data for %s", symbol)
+		return 0, nil, nil, nil, fmt.Errorf("insufficient data for %s (need 14 bars, got %d)", symbol, len(bars))
 	}
 
-	// Fetch RSI
+	// Parse timestamps once for both RSI and ATR fetches
 	startTime, err := time.Parse(time.RFC3339, bars[0].Timestamp)
 	if err != nil {
-		log.Printf("Failed to parse start time: %v", err)
-	} else {
-		endTime, err := time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
+		log.Printf("Failed to parse start time for %s: %v", symbol, err)
+		// Fallback: continue without RSI/ATR, score on volume and pattern only
+	}
+	endTime, err := time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
+	if err != nil {
+		log.Printf("Failed to parse end time for %s: %v", symbol, err)
+		// Fallback: continue without RSI/ATR, score on volume and pattern only
+	}
+
+	// Fetch RSI if timestamps were parsed successfully
+	if err == nil {
+		rsiMap, err := datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
 		if err != nil {
-			log.Printf("Failed to parse end time: %v", err)
-		} else {
-			rsiMap, err := datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
-			if err != nil {
-				log.Printf("RSI fetch failed for %s: %v", symbol, err)
-			} else if len(rsiMap) > 0 {
-				rsi = findLatestValue(rsiMap)
-			}
+			log.Printf("RSI fetch failed for %s: %v", symbol, err)
+		} else if len(rsiMap) > 0 {
+			rsi = findLatestValue(rsiMap)
 		}
 	}
 
-	// Fetch ATR
-	startTime, err = time.Parse(time.RFC3339, bars[0].Timestamp)
-	if err != nil {
-		log.Printf("Failed to parse start time: %v", err)
-	} else {
-		endTime, err := time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
+	// Fetch ATR if timestamps were parsed successfully
+	if err == nil {
+		atrMap, err := datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
 		if err != nil {
-			log.Printf("Failed to parse end time: %v", err)
-		} else {
-			atrMap, err := datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
-			if err != nil {
-				log.Printf("ATR fetch failed for %s: %v", symbol, err)
-			} else if len(atrMap) > 0 {
-				atr = findLatestValue(atrMap)
-			}
+			log.Printf("ATR fetch failed for %s: %v", symbol, err)
+		} else if len(atrMap) > 0 {
+			atr = findLatestValue(atrMap)
 		}
 	}
 
@@ -117,9 +116,9 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 	score = 0
 	signals = []string{}
 
-	// RSI scoring
+	// RSI scoring using criteria threshold
 	if rsi != nil {
-		if *rsi < 30 {
+		if *rsi < criteria.MinOversoldRSI {
 			score += 20
 			signals = append(signals, fmt.Sprintf("RSI Oversold: %.2f", *rsi))
 		} else if *rsi > criteria.MaxRSI {
@@ -168,6 +167,7 @@ func calculateAvgVolume(bars []datafeed.Bar, period int) float64 {
 	return sum / float64(period)
 }
 
+// Helper to find latest value in map by timestamp keys
 func findLatestValue(m map[string]float64) *float64 {
 	if len(m) == 0 {
 		return nil

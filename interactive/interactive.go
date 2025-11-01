@@ -32,6 +32,54 @@ func FetchMarketData(symbol string, timeframe string, limit int, startDate strin
 	return bars, nil
 }
 
+func ShowMainMenu() (string, error) {
+	fmt.Println("Welcome to MongelMaker Interactive!")
+	fmt.Println("1. Analyze Single Stock")
+	fmt.Println("2. Screen Multiple Stocks")
+	fmt.Print("Enter choice: ")
+	var choice int
+	_, err := fmt.Scan(&choice)
+
+	if err != nil {
+		fmt.Println("Invalid input. Please enter a valid number.")
+		return "", err
+	}
+
+	switch choice {
+	case 1:
+		return "single", nil
+	case 2:
+		return "screener", nil
+	default:
+		fmt.Println("Invalid choice.")
+		return "", fmt.Errorf("invalid choice")
+	}
+}
+
+func PickStockFromResults(results []strategy.StockScore) (string, error) {
+	fmt.Println("\nSelect a stock to analyze in detail:")
+	for i, result := range results {
+		rsiStr := "-"
+		if result.RSI != nil {
+			rsiStr = fmt.Sprintf("%.1f", *result.RSI)
+		}
+		atrStr := "-"
+		if result.ATR != nil {
+			atrStr = fmt.Sprintf("%.2f", *result.ATR)
+		}
+		fmt.Printf("%d. %s (Score: %.1f, RSI: %s, ATR: %s)\n",
+			i+1, result.Symbol, result.Score, rsiStr, atrStr)
+	}
+	fmt.Print("Enter choice: ")
+	var choice int
+	_, err := fmt.Scan(&choice)
+	if err != nil || choice < 1 || choice > len(results) {
+		fmt.Println("Invalid input.")
+		return "", fmt.Errorf("invalid choice")
+	}
+	return results[choice-1].Symbol, nil
+}
+
 func DisplayBasicData(bars []datafeed.Bar, symbol string, timeframe string) {
 	fmt.Printf("\n📊 Basic Data for %s (%s)\n", symbol, timeframe)
 	fmt.Println("Timestamp           | Close Price | Volume")

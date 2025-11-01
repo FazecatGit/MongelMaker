@@ -50,24 +50,6 @@ func calculateCommonMetrics(candle Candlestick) CommonMetrics {
 	}
 }
 
-func CalculateBodyWickRatios(candle Candlestick) (bodyToUpperRatio, bodyToLowerRatio float64) {
-	body := math.Abs(candle.Close - candle.Open)
-	upperWick := candle.High - math.Max(candle.Open, candle.Close)
-	lowerWick := math.Min(candle.Open, candle.Close) - candle.Low
-
-	bodyToUpperRatio = 0
-	bodyToLowerRatio = 0
-
-	if upperWick != 0 {
-		bodyToUpperRatio = body / upperWick
-	}
-	if lowerWick != 0 {
-		bodyToLowerRatio = body / lowerWick
-	}
-
-	return
-}
-
 func AnalyzeCandlestick(candle Candlestick) (map[string]float64, map[string]string) {
 	common := calculateCommonMetrics(candle)
 	upperPct := 0.0
