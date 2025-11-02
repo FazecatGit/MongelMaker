@@ -1,0 +1,416 @@
+[
+  {
+    "Timestamp": "2025-08-05 00:00:00",
+    "Open": 308.95,
+    "High": 312.4499,
+    "Low": 305.5,
+    "Close": 308.72,
+    "Volume": 57961278,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Doji (indecision)",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-06 00:00:00",
+    "Open": 307.89,
+    "High": 320.47,
+    "Low": 306.9345,
+    "Close": 319.91,
+    "Volume": 78523579,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Strong Bullish",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-07 00:00:00",
+    "Open": 319.79,
+    "High": 322.4,
+    "Low": 316.16,
+    "Close": 322.27,
+    "Volume": 66658672,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Bullish",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-08 00:00:00",
+    "Open": 321.43,
+    "High": 335.15,
+    "Low": 320.98,
+    "Close": 329.65,
+    "Volume": 91200319,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Bullish",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-11 00:00:00",
+    "Open": 335,
+    "High": 346.64,
+    "Low": 334.15,
+    "Close": 339.03,
+    "Volume": 105320174,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Bullish",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-12 00:00:00",
+    "Open": 345,
+    "High": 345.26,
+    "Low": 332.94,
+    "Close": 340.84,
+    "Volume": 80690111,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Bearish",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-13 00:00:00",
+    "Open": 341.5,
+    "High": 348.98,
+    "Low": 338.2,
+    "Close": 339.38,
+    "Volume": 67838892,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Bearish",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-14 00:00:00",
+    "Open": 335.76,
+    "High": 340.4699,
+    "Low": 330.4,
+    "Close": 335.58,
+    "Volume": 75000662,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Doji (indecision)",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-15 00:00:00",
+    "Open": 337.655,
+    "High": 339.3,
+    "Low": 327.02,
+    "Close": 330.56,
+    "Volume": 74319792,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Bearish",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-18 00:00:00",
+    "Open": 329.62,
+    "High": 336.27,
+    "Low": 329.59,
+    "Close": 335.16,
+    "Volume": 56956552,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Strong Bullish",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-19 00:00:00",
+    "Open": 335.79,
+    "High": 340.55,
+    "Low": 327.85,
+    "Close": 329.31,
+    "Volume": 75956002,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Bearish",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-20 00:00:00",
+    "Open": 329.22,
+    "High": 331.37,
+    "Low": 314.6,
+    "Close": 323.9,
+    "Volume": 77481768,
+    "RSI": null,
+    "ATR": null,
+    "Analysis": "Bearish",
+    "Signals": null
+  },
+  {
+    "Timestamp": "2025-08-21 00:00:00",
+    "Open": 322.08,
+    "High": 324.9,
+    "Low": 318.68,
+    "Close": 320.11,
+    "Volume": 55744445,
+    "RSI": 62.63,
+    "ATR": 11.0853,
+    "Analysis": "Bearish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-08-22 00:00:00",
+    "Open": 321.66,
+    "High": 340.25,
+    "Low": 319.69,
+    "Close": 340.01,
+    "Volume": 94016347,
+    "RSI": 68.64,
+    "ATR": 11.8761,
+    "Analysis": "Strong Bullish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-08-25 00:00:00",
+    "Open": 338.9,
+    "High": 349.53,
+    "Low": 335.03,
+    "Close": 346.6,
+    "Volume": 86670037,
+    "RSI": 71.39,
+    "ATR": 12.4154,
+    "Analysis": "Bullish",
+    "Signals": [
+      "Overbought",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-08-26 00:00:00",
+    "Open": 344.93,
+    "High": 351.9,
+    "Low": 343.72,
+    "Close": 351.67,
+    "Volume": 76651550,
+    "RSI": 69.27,
+    "ATR": 12.0328,
+    "Analysis": "Strong Bullish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-08-27 00:00:00",
+    "Open": 351.94,
+    "High": 355.39,
+    "Low": 349.156,
+    "Close": 349.6,
+    "Volume": 65519012,
+    "RSI": 66.64,
+    "ATR": 12.0324,
+    "Analysis": "Bearish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-08-28 00:00:00",
+    "Open": 350.91,
+    "High": 353.55,
+    "Low": 340.26,
+    "Close": 345.98,
+    "Volume": 67903224,
+    "RSI": 60.42,
+    "ATR": 11.9696,
+    "Analysis": "Bearish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-08-29 00:00:00",
+    "Open": 347.23,
+    "High": 348.7499,
+    "Low": 331.7,
+    "Close": 333.87,
+    "Volume": 81138443,
+    "RSI": 46.82,
+    "ATR": 11.9738,
+    "Analysis": "Strong Bearish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-02 00:00:00",
+    "Open": 328.23,
+    "High": 333.33,
+    "Low": 325.6,
+    "Close": 329.36,
+    "Volume": 58391952,
+    "RSI": 43.15,
+    "ATR": 11.6846,
+    "Analysis": "Bullish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-03 00:00:00",
+    "Open": 335.2,
+    "High": 343.33,
+    "Low": 328.51,
+    "Close": 334.09,
+    "Volume": 88733288,
+    "RSI": 46.96,
+    "ATR": 11.9731,
+    "Analysis": "Doji (indecision)",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-04 00:00:00",
+    "Open": 336.15,
+    "High": 338.89,
+    "Low": 331.48,
+    "Close": 338.53,
+    "Volume": 60711033,
+    "RSI": 51.68,
+    "ATR": 11.7831,
+    "Analysis": "Bullish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-05 00:00:00",
+    "Open": 348,
+    "High": 355.87,
+    "Low": 344.6801,
+    "Close": 350.84,
+    "Volume": 108980073,
+    "RSI": 60.67,
+    "ATR": 12.1446,
+    "Analysis": "Bullish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-08 00:00:00",
+    "Open": 354.64,
+    "High": 358.44,
+    "Low": 344.84,
+    "Close": 346.4,
+    "Volume": 75208290,
+    "RSI": 55.93,
+    "ATR": 12.6388,
+    "Analysis": "Strong Bearish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-09 00:00:00",
+    "Open": 348.44,
+    "High": 350.77,
+    "Low": 343.82,
+    "Close": 346.97,
+    "Volume": 53815991,
+    "RSI": 59.86,
+    "ATR": 12.2281,
+    "Analysis": "Bearish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-10 00:00:00",
+    "Open": 350.55,
+    "High": 356.33,
+    "Low": 346.07,
+    "Close": 347.79,
+    "Volume": 72121679,
+    "RSI": 64.06,
+    "ATR": 11.7631,
+    "Analysis": "Bearish",
+    "Signals": [
+      "Neutral",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-11 00:00:00",
+    "Open": 350.17,
+    "High": 368.99,
+    "Low": 347.6,
+    "Close": 368.81,
+    "Volume": 103732806,
+    "RSI": 73.83,
+    "ATR": 12.8467,
+    "Analysis": "Strong Bullish",
+    "Signals": [
+      "Overbought",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-12 00:00:00",
+    "Open": 370.94,
+    "High": 396.6899,
+    "Low": 370.24,
+    "Close": 395.94,
+    "Volume": 168156391,
+    "RSI": 75.56,
+    "ATR": 13.3696,
+    "Analysis": "Strong Bullish",
+    "Signals": [
+      "Overbought",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-15 00:00:00",
+    "Open": 423.13,
+    "High": 425.7,
+    "Low": 402.43,
+    "Close": 410.04,
+    "Volume": 163823667,
+    "RSI": 77.13,
+    "ATR": 14.4596,
+    "Analysis": "Bearish",
+    "Signals": [
+      "Overbought",
+      "High Vol"
+    ]
+  },
+  {
+    "Timestamp": "2025-09-16 00:00:00",
+    "Open": 414.495,
+    "High": 423.25,
+    "Low": 411.43,
+    "Close": 421.62,
+    "Volume": 104285721,
+    "RSI": 78.33,
+    "ATR": 14.8188,
+    "Analysis": "Strong Bullish",
+    "Signals": [
+      "Overbought",
+      "High Vol"
+    ]
+  }
+]
