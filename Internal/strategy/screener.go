@@ -32,10 +32,10 @@ type StockScore struct {
 
 func DefaultScreenerCriteria() ScreenerCriteria {
 	return ScreenerCriteria{
-		MinOversoldRSI: 30,  // RSI < 30 indicates oversold
-		MaxRSI:         70,  // Avoid overbought
-		MinATR:         0.5, // Some volatility
-		MinVolumeRatio: 1.2, // 20% above average
+		MinOversoldRSI: 35,  // RSI < 35 indicates oversold (more lenient)
+		MaxRSI:         75,  // Avoid overbought (more lenient)
+		MinATR:         0.1, // Very low volatility threshold
+		MinVolumeRatio: 1.0, // Any volume above average (was 1.2)
 	}
 }
 
@@ -49,9 +49,10 @@ func ScreenStocks(symbols []string, timeframe string, numBars int, criteria Scre
 			log.Printf("Error screening %s: %v", symbol, err)
 			continue
 		}
-		// Skip stocks with no signals (score 0 and no data)
-		if score == 0 && len(signals) == 0 {
-			log.Printf("Skipping %s: no tradeable signals", symbol)
+		// Include stocks with ANY data or signals (more inclusive)
+		// Skip only if completely empty (no bars, no data at all)
+		if score == 0 && len(signals) == 0 && rsi == nil && atr == nil {
+			log.Printf("Skipping %s: no data available", symbol)
 			continue
 		}
 		results = append(results, StockScore{
@@ -77,37 +78,36 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 	if err != nil {
 		return 0, nil, nil, nil, err
 	}
-	if len(bars) < 14 {
-		return 0, nil, nil, nil, fmt.Errorf("insufficient data for %s (need 14 bars, got %d)", symbol, len(bars))
+	// More lenient: work with what we have (minimum 2 bars for comparison)
+	if len(bars) < 2 {
+		return 0, nil, nil, nil, fmt.Errorf("insufficient data for %s (need 2 bars, got %d)", symbol, len(bars))
 	}
 
 	// Parse timestamps once for both RSI and ATR fetches
 	startTime, err := time.Parse(time.RFC3339, bars[0].Timestamp)
 	if err != nil {
-		log.Printf("Failed to parse start time for %s: %v", symbol, err)
-		// Fallback: continue without RSI/ATR, score on volume and pattern only
+		log.Printf("Failed to parse start time for %s: %v (continuing without indicators)", symbol, err)
 	}
-	endTime, err := time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
-	if err != nil {
-		log.Printf("Failed to parse end time for %s: %v", symbol, err)
-		// Fallback: continue without RSI/ATR, score on volume and pattern only
+	endTime := time.Now()
+	if len(bars) > 0 {
+		endTime, _ = time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
 	}
 
-	// Fetch RSI if timestamps were parsed successfully
+	// Try to fetch RSI, but continue if it fails (indicators are optional)
 	if err == nil {
-		rsiMap, err := datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
-		if err != nil {
-			log.Printf("RSI fetch failed for %s: %v", symbol, err)
+		rsiMap, rsiErr := datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
+		if rsiErr != nil {
+			log.Printf("RSI fetch failed for %s: %v (continuing with other signals)", symbol, rsiErr)
 		} else if len(rsiMap) > 0 {
 			rsi = findLatestValue(rsiMap)
 		}
 	}
 
-	// Fetch ATR if timestamps were parsed successfully
+	// Try to fetch ATR, but continue if it fails (indicators are optional)
 	if err == nil {
-		atrMap, err := datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
-		if err != nil {
-			log.Printf("ATR fetch failed for %s: %v", symbol, err)
+		atrMap, atrErr := datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
+		if atrErr != nil {
+			log.Printf("ATR fetch failed for %s: %v (continuing with other signals)", symbol, atrErr)
 		} else if len(atrMap) > 0 {
 			atr = findLatestValue(atrMap)
 		}
@@ -157,11 +157,14 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		}
 	}
 
-	// Pattern scoring
+	// Pattern scoring (higher priority when indicators missing)
 	if confidence > 0.7 {
-		score += 10
+		score += 15 // Increased from 10
 		signals = append(signals, fmt.Sprintf("Strong Pattern: %s (%.0f%%)", analysis, confidence*100))
 	} else if confidence > 0.5 {
+		score += 10 // Increased from 5
+		signals = append(signals, fmt.Sprintf("Pattern: %s (%.0f%%)", analysis, confidence*100))
+	} else if confidence > 0.3 {
 		score += 5
 		signals = append(signals, fmt.Sprintf("Pattern: %s (%.0f%%)", analysis, confidence*100))
 	}

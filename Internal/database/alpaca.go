@@ -19,8 +19,8 @@ func GetAlpacaBars(symbol string, timeframe string, limit int, startDate string)
 	secretKey := os.Getenv("ALPACA_API_SECRET")
 
 	if startDate == "" {
-		// Default to 90 days
-		startDate = time.Now().UTC().AddDate(0, 0, -90).Format(time.RFC3339)
+		// Default to 180 days for more history
+		startDate = time.Now().UTC().AddDate(0, 0, -180).Format(time.RFC3339)
 	}
 
 	apiURL := fmt.Sprintf(

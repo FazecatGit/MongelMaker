@@ -11,6 +11,7 @@ import (
 	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	"github.com/fazecat/mongelmaker/Internal/export"
+	newsscraping "github.com/fazecat/mongelmaker/Internal/news_scraping"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/interactive"
 	"github.com/joho/godotenv"
@@ -55,6 +56,9 @@ func main() {
 		log.Fatalln(err)
 	}
 	defer resp.Body.Close()
+
+	// Initialize Finnhub client for news fetching
+	finnhubClient := newsscraping.NewFinnhubClient()
 
 	// Show main menu
 	mainChoice, err := interactive.ShowMainMenu()
@@ -126,6 +130,31 @@ func main() {
 
 	// Calculate indicators and fetch data for chosen symbol
 	testIndicators(symbol, numBars, timeframe)
+
+	// Fetch news for the chosen stock
+	fmt.Printf("\n📰 Fetching news for %s...\n", symbol)
+	news, err := finnhubClient.FetchNews(symbol, 5)
+	if err != nil {
+		fmt.Printf("⚠️  Could not fetch news: %v\n", err)
+	} else if len(news) > 0 {
+		fmt.Println("\n📰 Latest News Headlines:")
+		for i, article := range news {
+			sentimentEmoji := "➡️ "
+			if article.Sentiment == newsscraping.Positive {
+				sentimentEmoji = "📈"
+			} else if article.Sentiment == newsscraping.Negative {
+				sentimentEmoji = "📉"
+			}
+
+			impactStr := fmt.Sprintf("%.0f%%", article.Impact*100)
+
+			fmt.Printf("\n%d. %s %s | Catalyst: %s | Impact: %s\n",
+				i+1, sentimentEmoji, article.Sentiment, article.CatalystType, impactStr)
+			fmt.Printf("   📰 %s\n", article.Headline)
+			fmt.Printf("   🔗 %s\n", article.URL)
+			fmt.Printf("   📅 %s\n", article.PublishedAt.Format("2006-01-02 15:04 MST"))
+		}
+	}
 
 	bars, err := interactive.FetchMarketData(symbol, timeframe, numBars, "")
 	if err != nil {
