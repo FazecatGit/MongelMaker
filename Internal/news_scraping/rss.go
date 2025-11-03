@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -44,6 +45,20 @@ func NewRSSClinet() *RSSClient {
 	}
 }
 
+// cleanXML removes problematic characters that cause XML parsing errors
+func cleanXML(data []byte) []byte {
+	// Yahoo's RSS feed sometimes has malformed XML attributes
+	cleaned := make([]byte, 0, len(data))
+	for i := 0; i < len(data); i++ {
+		b := data[i]
+		// Keep: printable ASCII (32-126), newlines, tabs, UTF-8 sequences
+		if (b >= 32 && b <= 126) || b == '\n' || b == '\r' || b == '\t' || b >= 128 {
+			cleaned = append(cleaned, b)
+		}
+	}
+	return cleaned
+}
+
 func (c *RSSClient) FetchNews(symbol string, limit int) ([]NewsArticle, error) {
 	url, exists := c.feeds[symbol]
 	if !exists {
@@ -56,8 +71,15 @@ func (c *RSSClient) FetchNews(symbol string, limit int) ([]NewsArticle, error) {
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
+
+	// Clean the XML before parsing
+	body = cleanXML(body)
+
+	// Try to decode using xml.Decoder for better error handling
 	var feed RSSFeed
-	if err := xml.Unmarshal(body, &feed); err != nil {
+	decoder := xml.NewDecoder(strings.NewReader(string(body)))
+	decoder.Strict = false // More forgiving parsing
+	if err := decoder.Decode(&feed); err != nil {
 		return nil, fmt.Errorf("failed to parse RSS feed: %v", err)
 	}
 
@@ -65,6 +87,11 @@ func (c *RSSClient) FetchNews(symbol string, limit int) ([]NewsArticle, error) {
 	for i, item := range feed.Channel.Items {
 		if i >= limit {
 			break
+		}
+
+		// Skip empty headlines
+		if strings.TrimSpace(item.Title) == "" {
+			continue
 		}
 
 		pubTime, _ := time.Parse(time.RFC1123Z, item.PubDate)

@@ -69,3 +69,22 @@ WHERE symbol = $1
   AND calculation_timestamp >= $2
   AND calculation_timestamp <= $3
 ORDER BY calculation_timestamp ASC;
+
+-- name: SaveNewsArticle :exec
+INSERT INTO news_articles (symbol, headline, url, published_at, source, sentiment)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (url) DO NOTHING;
+
+-- name: GetLatestNews :many
+SELECT id, symbol, headline, url, published_at, source, sentiment, created_at
+FROM news_articles
+WHERE symbol = $1
+ORDER BY published_at DESC
+LIMIT $2;
+
+-- name: GetNewsForScreener :many
+SELECT id, symbol, headline, url, published_at, source, sentiment, created_at
+FROM news_articles
+WHERE symbol = ANY(sqlc.arg(symbols)::text[])
+AND published_at > NOW() - INTERVAL '7 days'
+ORDER BY published_at DESC;

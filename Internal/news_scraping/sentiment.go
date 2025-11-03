@@ -43,7 +43,7 @@ func (sa *SentimentAnalyzer) Analyze(text string) (SentimentScore, float64) {
 		}
 	}
 
-	if matches == 0 {
+	if matches > 0 {
 		score /= float64(matches)
 	}
 	sentiment := Neutral

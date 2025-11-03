@@ -85,7 +85,7 @@ func main() {
 		fmt.Println("\n🕵️  Stock Screener")
 		symbols := strategy.GetPopularStocks()[:50] // Top 50 stocks
 		fmt.Printf("Screening %d popular stocks...\n", len(symbols))
-		results, err := strategy.ScreenStocks(symbols, timeframe, numBars, strategy.DefaultScreenerCriteria())
+		results, err := strategy.ScreenStocks(symbols, timeframe, numBars, strategy.DefaultScreenerCriteria(), nil)
 		if err != nil {
 			fmt.Printf("Screener failed: %v\n", err)
 			return

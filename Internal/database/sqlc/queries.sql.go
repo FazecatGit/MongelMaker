@@ -7,7 +7,10 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const getATR = `-- name: GetATR :one
@@ -207,6 +210,51 @@ func (q *Queries) GetClosingPrices(ctx context.Context, arg GetClosingPricesPara
 	return items, nil
 }
 
+const getLatestNews = `-- name: GetLatestNews :many
+SELECT id, symbol, headline, url, published_at, source, sentiment, created_at
+FROM news_articles
+WHERE symbol = $1
+ORDER BY published_at DESC
+LIMIT $2
+`
+
+type GetLatestNewsParams struct {
+	Symbol string `json:"symbol"`
+	Limit  int32  `json:"limit"`
+}
+
+func (q *Queries) GetLatestNews(ctx context.Context, arg GetLatestNewsParams) ([]NewsArticle, error) {
+	rows, err := q.db.QueryContext(ctx, getLatestNews, arg.Symbol, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NewsArticle
+	for rows.Next() {
+		var i NewsArticle
+		if err := rows.Scan(
+			&i.ID,
+			&i.Symbol,
+			&i.Headline,
+			&i.Url,
+			&i.PublishedAt,
+			&i.Source,
+			&i.Sentiment,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLatestRSI = `-- name: GetLatestRSI :one
 SELECT rsi_value, calculation_timestamp
 FROM rsi_calculation
@@ -225,6 +273,46 @@ func (q *Queries) GetLatestRSI(ctx context.Context, symbol string) (GetLatestRSI
 	var i GetLatestRSIRow
 	err := row.Scan(&i.RsiValue, &i.CalculationTimestamp)
 	return i, err
+}
+
+const getNewsForScreener = `-- name: GetNewsForScreener :many
+SELECT id, symbol, headline, url, published_at, source, sentiment, created_at
+FROM news_articles
+WHERE symbol = ANY($1::text[])
+AND published_at > NOW() - INTERVAL '7 days'
+ORDER BY published_at DESC
+`
+
+func (q *Queries) GetNewsForScreener(ctx context.Context, symbols []string) ([]NewsArticle, error) {
+	rows, err := q.db.QueryContext(ctx, getNewsForScreener, pq.Array(symbols))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NewsArticle
+	for rows.Next() {
+		var i NewsArticle
+		if err := rows.Scan(
+			&i.ID,
+			&i.Symbol,
+			&i.Headline,
+			&i.Url,
+			&i.PublishedAt,
+			&i.Source,
+			&i.Sentiment,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getRSIByTimestampRange = `-- name: GetRSIByTimestampRange :many
@@ -326,6 +414,33 @@ type SaveATRParams struct {
 
 func (q *Queries) SaveATR(ctx context.Context, arg SaveATRParams) error {
 	_, err := q.db.ExecContext(ctx, saveATR, arg.Symbol, arg.CalculationTimestamp, arg.AtrValue)
+	return err
+}
+
+const saveNewsArticle = `-- name: SaveNewsArticle :exec
+INSERT INTO news_articles (symbol, headline, url, published_at, source, sentiment)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (url) DO NOTHING
+`
+
+type SaveNewsArticleParams struct {
+	Symbol      string         `json:"symbol"`
+	Headline    string         `json:"headline"`
+	Url         string         `json:"url"`
+	PublishedAt time.Time      `json:"published_at"`
+	Source      sql.NullString `json:"source"`
+	Sentiment   sql.NullString `json:"sentiment"`
+}
+
+func (q *Queries) SaveNewsArticle(ctx context.Context, arg SaveNewsArticleParams) error {
+	_, err := q.db.ExecContext(ctx, saveNewsArticle,
+		arg.Symbol,
+		arg.Headline,
+		arg.Url,
+		arg.PublishedAt,
+		arg.Source,
+		arg.Sentiment,
+	)
 	return err
 }
 

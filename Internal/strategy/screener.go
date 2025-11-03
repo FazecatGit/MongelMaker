@@ -1,10 +1,13 @@
 package strategy
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sort"
 	"time"
+
+	. "github.com/fazecat/mongelmaker/Internal/news_scraping"
 
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	"github.com/fazecat/mongelmaker/Internal/utils"
@@ -18,11 +21,13 @@ type ScreenerCriteria struct {
 }
 
 type StockScore struct {
-	Symbol  string
-	Score   float64
-	Signals []string
-	RSI     *float64
-	ATR     *float64
+	Symbol        string
+	Score         float64
+	Signals       []string
+	RSI           *float64
+	ATR           *float64
+	NewsSentiment SentimentScore
+	NewsImpact    float64
 }
 
 func DefaultScreenerCriteria() ScreenerCriteria {
@@ -35,11 +40,11 @@ func DefaultScreenerCriteria() ScreenerCriteria {
 }
 
 // ScreenStocks screens a list of symbols based on criteria
-func ScreenStocks(symbols []string, timeframe string, numBars int, criteria ScreenerCriteria) ([]StockScore, error) {
+func ScreenStocks(symbols []string, timeframe string, numBars int, criteria ScreenerCriteria, newsStorage *NewsStorage) ([]StockScore, error) {
 	var results []StockScore
 
 	for _, symbol := range symbols {
-		score, signals, rsi, atr, err := scoreStock(symbol, timeframe, numBars, criteria)
+		score, signals, rsi, atr, err := scoreStock(symbol, timeframe, numBars, criteria, newsStorage)
 		if err != nil {
 			log.Printf("Error screening %s: %v", symbol, err)
 			continue
@@ -66,7 +71,7 @@ func ScreenStocks(symbols []string, timeframe string, numBars int, criteria Scre
 	return results, nil
 }
 
-func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria) (score float64, signals []string, rsi, atr *float64, err error) {
+func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria, newsStorage *NewsStorage) (score float64, signals []string, rsi, atr *float64, err error) {
 	// Fetch bars
 	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, numBars, "")
 	if err != nil {
@@ -141,6 +146,14 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		if volRatio > criteria.MinVolumeRatio {
 			score += 15
 			signals = append(signals, fmt.Sprintf("High Volume: %.1fx avg", volRatio))
+		}
+	}
+
+	// Fetch news sentiment if available (optional - newsStorage can be nil)
+	if newsStorage != nil {
+		news, err := newsStorage.GetLatestNews(context.Background(), symbol, 1)
+		if err == nil && len(news) > 0 && news[0].Sentiment == Positive {
+			score += 10 // Boost score for positive sentiment
 		}
 	}
 
