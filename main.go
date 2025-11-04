@@ -131,7 +131,7 @@ func main() {
 	// Calculate indicators and fetch data for chosen symbol
 	testIndicators(symbol, numBars, timeframe)
 
-	// Fetch news for the chosen stock
+	// Fetch news for the chosen stock with Finnhub
 	fmt.Printf("\n📰 Fetching news for %s...\n", symbol)
 	news, err := finnhubClient.FetchNews(symbol, 5)
 	if err != nil {

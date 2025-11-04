@@ -84,37 +84,36 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 	}
 
 	// Parse timestamps once for both RSI and ATR fetches
-	startTime, err := time.Parse(time.RFC3339, bars[0].Timestamp)
-	if err != nil {
-		log.Printf("Failed to parse start time for %s: %v (continuing without indicators)", symbol, err)
-	}
+	// Note: bars are now ordered latest→oldest, so bars[0] is newest
+	startTime := time.Now().AddDate(0, 0, -180) // 180 days lookback
 	endTime := time.Now()
+
 	if len(bars) > 0 {
-		endTime, _ = time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
+		// Get oldest bar timestamp (at end of slice now since reversed)
+		oldestTime, err := time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
+		if err == nil {
+			startTime = oldestTime
+		}
 	}
 
 	// Try to fetch RSI, but continue if it fails (indicators are optional)
-	if err == nil {
-		rsiMap, rsiErr := datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
-		if rsiErr != nil {
-			log.Printf("RSI fetch failed for %s: %v (continuing with other signals)", symbol, rsiErr)
-		} else if len(rsiMap) > 0 {
-			rsi = findLatestValue(rsiMap)
-		}
+	rsiMap, rsiErr := datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
+	if rsiErr != nil {
+		log.Printf("RSI fetch failed for %s: %v (continuing with other signals)", symbol, rsiErr)
+	} else if len(rsiMap) > 0 {
+		rsi = findLatestValue(rsiMap)
 	}
 
 	// Try to fetch ATR, but continue if it fails (indicators are optional)
-	if err == nil {
-		atrMap, atrErr := datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
-		if atrErr != nil {
-			log.Printf("ATR fetch failed for %s: %v (continuing with other signals)", symbol, atrErr)
-		} else if len(atrMap) > 0 {
-			atr = findLatestValue(atrMap)
-		}
+	atrMap, atrErr := datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
+	if atrErr != nil {
+		log.Printf("ATR fetch failed for %s: %v (continuing with other signals)", symbol, atrErr)
+	} else if len(atrMap) > 0 {
+		atr = findLatestValue(atrMap)
 	}
 
-	// Analyze latest candle
-	latestBar := bars[len(bars)-1]
+	// Analyze latest candle (now at bars[0] since reversed)
+	latestBar := bars[0]
 	avgVol20 := calculateAvgVolume(bars, 20)
 	analysis, confidence := utils.PatternAnalyzeCandle(latestBar, atr, avgVol20, int64(latestBar.Volume))
 

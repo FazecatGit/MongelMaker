@@ -199,8 +199,10 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 		bodyToLowerStr := fmt.Sprintf("%9.2f", metrics["BodyToLower"])
 		analysisStr := results["Analysis"]
 
-		// visualize signals
+		// visualize signals - use stored RSI/ATR or fallback to price action
 		signalStr := ""
+
+		// RSI Signal
 		if hasRSI {
 			rsiSignal := strategy.DetermineRSISignal(rsiVal)
 			switch rsiSignal {
@@ -210,6 +212,20 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 				signalStr += "📉 Oversold"
 			case "neutral":
 				signalStr += "➡️  Neutral"
+			}
+		} else {
+			// Fallback: Generate signal from candle analysis
+			analysis := results["Analysis"]
+			if analysis == "Strong Bullish" || analysis == "Bullish" {
+				signalStr += "📈 Bullish Signal"
+			} else if analysis == "Strong Bearish" || analysis == "Bearish" {
+				signalStr += "📉 Bearish Signal"
+			} else if analysis == "Doji (indecision)" {
+				signalStr += "➡️  Wait Signal"
+			} else if analysis == "Bullish Rejection" {
+				signalStr += "📈 Reversal Setup"
+			} else if analysis == "Bearish Rejection" {
+				signalStr += "📉 Reversal Setup"
 			}
 		}
 
@@ -227,6 +243,22 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 				signalStr += "⚡ High Vol"
 			case "low volatility":
 				signalStr += "❄️  Low Vol"
+			}
+		} else {
+			// Fallback: Calculate volatility from price range (works for all asset classes)
+			priceRange := bar.High - bar.Low
+			rangePct := (priceRange / bar.Close) * 100
+
+			if signalStr != "" {
+				signalStr += " | "
+			}
+
+			if rangePct > 0.5 {
+				signalStr += "⚡ High Volatility"
+			} else if rangePct < 0.1 {
+				signalStr += "❄️  Low Volatility"
+			} else {
+				signalStr += "↔️ Medium Volatility"
 			}
 		}
 
@@ -433,6 +465,18 @@ func PrepareExportData(bars []datafeed.Bar, symbol string, timezone *time.Locati
 				signals = append(signals, "High Vol")
 			case "low volatility":
 				signals = append(signals, "Low Vol")
+			}
+		} else {
+			// Fallback: Calculate volatility from price range (works for all asset classes)
+			priceRange := bar.High - bar.Low
+			rangePct := (priceRange / bar.Close) * 100
+
+			if rangePct > 0.5 {
+				signals = append(signals, "High Volatility")
+			} else if rangePct < 0.1 {
+				signals = append(signals, "Low Volatility")
+			} else {
+				signals = append(signals, "Medium Volatility")
 			}
 		}
 

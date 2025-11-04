@@ -19,8 +19,43 @@ func GetAlpacaBars(symbol string, timeframe string, limit int, startDate string)
 	secretKey := os.Getenv("ALPACA_API_SECRET")
 
 	if startDate == "" {
-		// Default to 180 days for more history
-		startDate = time.Now().UTC().AddDate(0, 0, -180).Format(time.RFC3339)
+		// Compute a start time far enough in the past to return `limit` bars
+		now := time.Now().UTC()
+
+		timeframeToDur := func(tf string) time.Duration {
+			switch tf {
+			case "1Min":
+				return time.Minute
+			case "3Min":
+				return 3 * time.Minute
+			case "5Min":
+				return 5 * time.Minute
+			case "10Min":
+				return 10 * time.Minute
+			case "30Min":
+				return 30 * time.Minute
+			case "1Hour":
+				return time.Hour
+			case "2Hour":
+				return 2 * time.Hour
+			case "4Hour":
+				return 4 * time.Hour
+			case "1Day":
+				return 24 * time.Hour
+			case "1Week":
+				return 7 * 24 * time.Hour
+			case "1Month":
+				return 30 * 24 * time.Hour
+			default:
+				return 24 * time.Hour
+			}
+		}
+
+		barDur := timeframeToDur(timeframe)
+		// add a small safety buffer of 2 bars
+		totalDur := barDur * time.Duration(limit+2)
+		start := now.Add(-totalDur)
+		startDate = start.Format(time.RFC3339)
 	}
 
 	apiURL := fmt.Sprintf(
@@ -77,6 +112,12 @@ func GetAlpacaBars(symbol string, timeframe string, limit int, startDate string)
 	}
 
 	fmt.Printf("📊 Received %d bars\n", len(bars))
+
+	// Reverse bars to latest-first (most recent data first)
+	for i, j := 0, len(bars)-1; i < j; i, j = i+1, j-1 {
+		bars[i], bars[j] = bars[j], bars[i]
+	}
+
 	return bars, nil
 }
 
