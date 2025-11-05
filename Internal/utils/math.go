@@ -1,5 +1,7 @@
 package utils
 
+import "math"
+
 func Average(values []float64) float64 {
 	if len(values) == 0 {
 		return 0
@@ -48,4 +50,18 @@ func Min(values ...float64) float64 {
 		}
 	}
 	return min
+}
+
+func StandardDeviation(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	mean := Average(values)
+	variance := 0.0
+	for _, v := range values {
+		diff := v - mean
+		variance += diff * diff
+	}
+	variance = variance / float64(len(values))
+	return math.Sqrt(variance)
 }
