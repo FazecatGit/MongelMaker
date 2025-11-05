@@ -84,17 +84,34 @@ func createWhaleEvent(symbol string, bar types.Bar, zScore float64, meanVolume f
 	direction := DetectDirection(bar)
 	conviction := DetermineConviction(zScore)
 
-		whaleEvent := WhaleEvent{
-			Timestamp:   bar.Timestamp,
-			Symbol:      symbol,
-			Direction:   direction,          // "BUY" or "SELL"
-			Volume:      bar.Volume,
-			ZScore:      zScore,
-			ClosePrice:  bar.Close,
-			PriceChange: 0,                   // Optional: calculate from previous bar
-			Conviction: conviction              // "HIGH" or "MEDIUM"
-		}
+	whaleEvent := WhaleEvent{
+		Timestamp:   bar.Timestamp,
+		Symbol:      symbol,
+		Direction:   direction, // "BUY" or "SELL"
+		Volume:      bar.Volume,
+		ZScore:      zScore,
+		ClosePrice:  bar.Close,
+		PriceChange: 0,
+		Conviction:  conviction,
+	}
 
-    return whaleEvent
+	return whaleEvent
 
+}
+func DetectDirection(bar types.Bar) string {
+	if bar.Close > bar.Open {
+		return "BUY"
+	} else if bar.Close < bar.Open {
+		return "SELL"
+	}
+	return "NEUTRAL"
+}
+
+func DetermineConviction(zScore float64) string {
+	if zScore > 3.0 {
+		return "HIGH"
+	} else if zScore > 2.0 {
+		return "MEDIUM"
+	}
+	return "LOW"
 }
