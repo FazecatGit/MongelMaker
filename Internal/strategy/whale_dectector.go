@@ -1,6 +1,9 @@
 package strategy
 
-import "github.com/fazecat/mongelmaker/Internal/utils"
+import (
+	"github.com/fazecat/mongelmaker/Internal/types"
+	"github.com/fazecat/mongelmaker/Internal/utils"
+)
 
 type VolumeStats struct {
 	Timestamp   string
@@ -41,4 +44,57 @@ func CalculateZScore(currentVolume int64, meanVolume float64, stdDev float64) fl
 
 	zScore := (float64(currentVolume) - meanVolume) / stdDev
 	return zScore
+}
+
+func DetectWhales(symbol string, bars []types.Bar) []WhaleEvent {
+	whales := make([]WhaleEvent, 0)
+
+	if len(bars) < 20 {
+		return whales
+	}
+	for i := 20; i < len(bars); i++ {
+		currentBar := bars[i]
+
+		historicalBars := bars[i-20 : i]
+		volumes := extractVolumes(historicalBars)
+
+		meanVolume, stdDev := CalculateVolumeStats(volumes)
+
+		zScore := CalculateZScore(currentBar.Volume, meanVolume, stdDev)
+
+		if zScore > 2.0 {
+			whale := createWhaleEvent(symbol, currentBar, zScore, meanVolume)
+			whales = append(whales, whale)
+		}
+	}
+
+	return whales
+}
+
+func extractVolumes(bars []types.Bar) []int64 {
+	volumes := make([]int64, len(bars))
+
+	for i, bar := range bars {
+		volumes[i] = bar.Volume
+	}
+	return volumes
+}
+
+func createWhaleEvent(symbol string, bar types.Bar, zScore float64, meanVolume float64) WhaleEvent {
+	direction := DetectDirection(bar)
+	conviction := DetermineConviction(zScore)
+
+		whaleEvent := WhaleEvent{
+			Timestamp:   bar.Timestamp,
+			Symbol:      symbol,
+			Direction:   direction,          // "BUY" or "SELL"
+			Volume:      bar.Volume,
+			ZScore:      zScore,
+			ClosePrice:  bar.Close,
+			PriceChange: 0,                   // Optional: calculate from previous bar
+			Conviction: conviction              // "HIGH" or "MEDIUM"
+		}
+
+    return whaleEvent
+
 }
