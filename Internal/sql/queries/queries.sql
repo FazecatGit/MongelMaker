@@ -85,6 +85,29 @@ LIMIT $2;
 -- name: GetNewsForScreener :many
 SELECT id, symbol, headline, url, published_at, source, sentiment, created_at
 FROM news_articles
-WHERE symbol = ANY(sqlc.arg(symbols)::text[])
+WHERE symbol = ANY($1::text[])
+ORDER BY published_at DESC;
+
+-- name: GetNewsBySymbol :many
+SELECT id, symbol, headline, url, published_at, source, sentiment, created_at
+FROM news_articles
+WHERE symbol = $1
 AND published_at > NOW() - INTERVAL '7 days'
 ORDER BY published_at DESC;
+
+-- name: GetWhaleEventsBySymbol :many
+SELECT * FROM whale_events
+WHERE symbol = $1 AND timestamp > NOW() - INTERVAL '7 days'
+ORDER BY timestamp DESC
+LIMIT $2;
+
+-- name: GetHighConvictionWhales :many
+SELECT * FROM whale_events
+WHERE symbol = $1 AND conviction = 'HIGH'
+ORDER BY z_score DESC
+LIMIT 10;
+
+-- name: CreateWhaleEvent :exec
+INSERT INTO whale_events (
+    symbol, timestamp, direction, volume, z_score, close_price, price_change, conviction
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);

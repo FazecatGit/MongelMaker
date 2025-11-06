@@ -164,3 +164,16 @@ type WhaleAlert struct {
 	AlertTimestamp time.Time    `json:"alert_timestamp"`
 	CreatedAt      sql.NullTime `json:"created_at"`
 }
+
+type WhaleEvent struct {
+	ID          int32          `json:"id"`
+	Symbol      string         `json:"symbol"`
+	Timestamp   time.Time      `json:"timestamp"`
+	Direction   string         `json:"direction"`
+	Volume      int64          `json:"volume"`
+	ZScore      string         `json:"z_score"`
+	ClosePrice  string         `json:"close_price"`
+	PriceChange sql.NullString `json:"price_change"`
+	Conviction  string         `json:"conviction"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
+}

@@ -13,6 +13,37 @@ import (
 	"github.com/lib/pq"
 )
 
+const createWhaleEvent = `-- name: CreateWhaleEvent :exec
+INSERT INTO whale_events (
+    symbol, timestamp, direction, volume, z_score, close_price, price_change, conviction
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`
+
+type CreateWhaleEventParams struct {
+	Symbol      string         `json:"symbol"`
+	Timestamp   time.Time      `json:"timestamp"`
+	Direction   string         `json:"direction"`
+	Volume      int64          `json:"volume"`
+	ZScore      string         `json:"z_score"`
+	ClosePrice  string         `json:"close_price"`
+	PriceChange sql.NullString `json:"price_change"`
+	Conviction  string         `json:"conviction"`
+}
+
+func (q *Queries) CreateWhaleEvent(ctx context.Context, arg CreateWhaleEventParams) error {
+	_, err := q.db.ExecContext(ctx, createWhaleEvent,
+		arg.Symbol,
+		arg.Timestamp,
+		arg.Direction,
+		arg.Volume,
+		arg.ZScore,
+		arg.ClosePrice,
+		arg.PriceChange,
+		arg.Conviction,
+	)
+	return err
+}
+
 const getATR = `-- name: GetATR :one
 SELECT atr_value, calculation_timestamp
 FROM atr_calculation
@@ -210,6 +241,47 @@ func (q *Queries) GetClosingPrices(ctx context.Context, arg GetClosingPricesPara
 	return items, nil
 }
 
+const getHighConvictionWhales = `-- name: GetHighConvictionWhales :many
+SELECT id, symbol, timestamp, direction, volume, z_score, close_price, price_change, conviction, created_at FROM whale_events
+WHERE symbol = $1 AND conviction = 'HIGH'
+ORDER BY z_score DESC
+LIMIT 10
+`
+
+func (q *Queries) GetHighConvictionWhales(ctx context.Context, symbol string) ([]WhaleEvent, error) {
+	rows, err := q.db.QueryContext(ctx, getHighConvictionWhales, symbol)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WhaleEvent
+	for rows.Next() {
+		var i WhaleEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.Symbol,
+			&i.Timestamp,
+			&i.Direction,
+			&i.Volume,
+			&i.ZScore,
+			&i.ClosePrice,
+			&i.PriceChange,
+			&i.Conviction,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLatestNews = `-- name: GetLatestNews :many
 SELECT id, symbol, headline, url, published_at, source, sentiment, created_at
 FROM news_articles
@@ -275,16 +347,55 @@ func (q *Queries) GetLatestRSI(ctx context.Context, symbol string) (GetLatestRSI
 	return i, err
 }
 
-const getNewsForScreener = `-- name: GetNewsForScreener :many
+const getNewsBySymbol = `-- name: GetNewsBySymbol :many
 SELECT id, symbol, headline, url, published_at, source, sentiment, created_at
 FROM news_articles
-WHERE symbol = ANY($1::text[])
+WHERE symbol = $1
 AND published_at > NOW() - INTERVAL '7 days'
 ORDER BY published_at DESC
 `
 
-func (q *Queries) GetNewsForScreener(ctx context.Context, symbols []string) ([]NewsArticle, error) {
-	rows, err := q.db.QueryContext(ctx, getNewsForScreener, pq.Array(symbols))
+func (q *Queries) GetNewsBySymbol(ctx context.Context, symbol string) ([]NewsArticle, error) {
+	rows, err := q.db.QueryContext(ctx, getNewsBySymbol, symbol)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NewsArticle
+	for rows.Next() {
+		var i NewsArticle
+		if err := rows.Scan(
+			&i.ID,
+			&i.Symbol,
+			&i.Headline,
+			&i.Url,
+			&i.PublishedAt,
+			&i.Source,
+			&i.Sentiment,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getNewsForScreener = `-- name: GetNewsForScreener :many
+SELECT id, symbol, headline, url, published_at, source, sentiment, created_at
+FROM news_articles
+WHERE symbol = ANY($1::text[])
+ORDER BY published_at DESC
+`
+
+func (q *Queries) GetNewsForScreener(ctx context.Context, dollar_1 []string) ([]NewsArticle, error) {
+	rows, err := q.db.QueryContext(ctx, getNewsForScreener, pq.Array(dollar_1))
 	if err != nil {
 		return nil, err
 	}
@@ -386,6 +497,52 @@ func (q *Queries) GetRSIForDateRange(ctx context.Context, arg GetRSIForDateRange
 	for rows.Next() {
 		var i GetRSIForDateRangeRow
 		if err := rows.Scan(&i.CalculationTimestamp, &i.RsiValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getWhaleEventsBySymbol = `-- name: GetWhaleEventsBySymbol :many
+SELECT id, symbol, timestamp, direction, volume, z_score, close_price, price_change, conviction, created_at FROM whale_events
+WHERE symbol = $1 AND timestamp > NOW() - INTERVAL '7 days'
+ORDER BY timestamp DESC
+LIMIT $2
+`
+
+type GetWhaleEventsBySymbolParams struct {
+	Symbol string `json:"symbol"`
+	Limit  int32  `json:"limit"`
+}
+
+func (q *Queries) GetWhaleEventsBySymbol(ctx context.Context, arg GetWhaleEventsBySymbolParams) ([]WhaleEvent, error) {
+	rows, err := q.db.QueryContext(ctx, getWhaleEventsBySymbol, arg.Symbol, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WhaleEvent
+	for rows.Next() {
+		var i WhaleEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.Symbol,
+			&i.Timestamp,
+			&i.Direction,
+			&i.Volume,
+			&i.ZScore,
+			&i.ClosePrice,
+			&i.PriceChange,
+			&i.Conviction,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
