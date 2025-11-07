@@ -73,19 +73,17 @@ func ScreenStocks(symbols []string, timeframe string, numBars int, criteria Scre
 }
 
 func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria, newsStorage *NewsStorage) (score float64, signals []string, rsi, atr *float64, err error) {
-	// Fetch bars
+
 	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, numBars, "")
 	if err != nil {
 		return 0, nil, nil, nil, err
 	}
-	// More lenient: work with what we have (minimum 2 bars for comparison)
+
 	if len(bars) < 2 {
 		return 0, nil, nil, nil, fmt.Errorf("insufficient data for %s (need 2 bars, got %d)", symbol, len(bars))
 	}
 
-	// Parse timestamps once for both RSI and ATR fetches
-	// Note: bars are now ordered latest→oldest, so bars[0] is newest
-	startTime := time.Now().AddDate(0, 0, -180) // 180 days lookback
+	startTime := time.Now().AddDate(0, 0, -180)
 	endTime := time.Now()
 
 	if len(bars) > 0 {
@@ -96,7 +94,7 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		}
 	}
 
-	// Try to fetch RSI, but continue if it fails (indicators are optional)
+	// Try to fetch RSI, but continue if it fails
 	rsiMap, rsiErr := datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
 	if rsiErr != nil {
 		log.Printf("RSI fetch failed for %s: %v (continuing with other signals)", symbol, rsiErr)
@@ -104,7 +102,7 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		rsi = findLatestValue(rsiMap)
 	}
 
-	// Try to fetch ATR, but continue if it fails (indicators are optional)
+	// Try to fetch ATR, but continue if it fails
 	atrMap, atrErr := datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
 	if atrErr != nil {
 		log.Printf("ATR fetch failed for %s: %v (continuing with other signals)", symbol, atrErr)
@@ -120,7 +118,6 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 	score = 0
 	signals = []string{}
 
-	// RSI scoring using criteria threshold
 	if rsi != nil {
 		if *rsi < criteria.MinOversoldRSI {
 			score += 20
@@ -133,13 +130,11 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		}
 	}
 
-	// ATR scoring
 	if atr != nil && *atr > criteria.MinATR {
 		score += 10
 		signals = append(signals, fmt.Sprintf("High Volatility ATR: %.2f", *atr))
 	}
 
-	// Volume scoring
 	if avgVol20 > 0 {
 		volRatio := float64(latestBar.Volume) / avgVol20
 		if volRatio > criteria.MinVolumeRatio {
@@ -148,7 +143,6 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		}
 	}
 
-	// Fetch news sentiment if available (optional - newsStorage can be nil)
 	if newsStorage != nil {
 		news, err := newsStorage.GetLatestNews(context.Background(), symbol, 1)
 		if err == nil && len(news) > 0 && news[0].Sentiment == Positive {
