@@ -182,11 +182,11 @@ func main() {
 	case "full":
 		interactive.DisplayAdvancedData(bars, symbol, timeframe)
 	case "analytics":
-		interactive.DisplayAnalyticsData(bars, symbol, timeframe, timezone)
+		interactive.DisplayAnalyticsData(bars, symbol, timeframe, timezone, datafeed.Queries)
 	case "all":
 		interactive.DisplayBasicData(bars, symbol, timeframe)
 		interactive.DisplayAdvancedData(bars, symbol, timeframe)
-		interactive.DisplayAnalyticsData(bars, symbol, timeframe, timezone)
+		interactive.DisplayAnalyticsData(bars, symbol, timeframe, timezone, datafeed.Queries)
 	case "export":
 		records := interactive.PrepareExportData(bars, symbol, timezone)
 		var format string

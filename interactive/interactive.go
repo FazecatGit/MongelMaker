@@ -1,10 +1,12 @@
 package interactive
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
+	sqlc "github.com/fazecat/mongelmaker/Internal/database/sqlc"
 	"github.com/fazecat/mongelmaker/Internal/export"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/Internal/utils"
@@ -102,7 +104,7 @@ func DisplayAdvancedData(bars []datafeed.Bar, symbol string, timeframe string) {
 	}
 }
 
-func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, tz *time.Location) {
+func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, tz *time.Location, queries *sqlc.Queries) {
 	fmt.Printf("\n📈 Analytics Data for %s (%s) - Timezone: %s\n", symbol, timeframe, tz.String())
 
 	var startTime, endTime time.Time
@@ -269,6 +271,69 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 		fmt.Printf("%-20s | %11.2f | %9.2f | %6.2f | %8d | %6s | %6s | %9s | %9s | %-25s | %-20s\n",
 			displayTimestamp, bar.Close, priceChange, priceChangePercent, bar.Volume, rsiStr, atrStr, bodyToUpperStr, bodyToLowerStr, analysisStr, signalStr)
 	}
+
+	// Display whale events if database available
+	if queries != nil {
+		fmt.Println()
+		displayWhaleEventsInline(symbol, queries)
+	}
+}
+
+func displayWhaleEventsInline(symbol string, queries *sqlc.Queries) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Fetch recent whale events
+	whales, err := datafeed.GetRecentWhales(ctx, queries, symbol, 10)
+	if err != nil {
+		fmt.Printf("⚠️  Could not fetch whale events: %v\n", err)
+		return
+	}
+
+	if len(whales) == 0 {
+		fmt.Println("🐋 Whale Activity: No significant volume anomalies detected")
+		return
+	}
+
+	fmt.Println("🐋 WHALE ACTIVITY DETECTED:")
+	fmt.Println("═══════════════════════════════════════════════════════════════════════════════════")
+	fmt.Println("Timestamp            | Direction | Z-Score | Volume (M)  | Price    | Conviction")
+	fmt.Println("═══════════════════════════════════════════════════════════════════════════════════")
+
+	for _, whale := range whales {
+		emoji := "🟢"
+		if whale.Direction == "SELL" {
+			emoji = "🔴"
+		}
+
+		// Format timestamp
+		tsStr := "---"
+		if !whale.Timestamp.IsZero() {
+			tsStr = whale.Timestamp.Format("2006-01-02 15:04:05")
+		}
+
+		// Volume in millions
+		volM := float64(whale.Volume) / 1_000_000
+
+		// Conviction level with visual indicator
+		convictionStr := whale.Conviction
+		if whale.Conviction == "HIGH" {
+			convictionStr = "🚨 HIGH"
+		} else if whale.Conviction == "MEDIUM" {
+			convictionStr = "⚠️  MEDIUM"
+		}
+
+		fmt.Printf("%s | %s %-7s | %7s | %10.1f | %8s | %s\n",
+			tsStr,
+			emoji,
+			whale.Direction,
+			whale.ZScore,
+			volM,
+			whale.ClosePrice,
+			convictionStr,
+		)
+	}
+	fmt.Println("═══════════════════════════════════════════════════════════════════════════════════")
 }
 
 func ShowTimeframeMenu() (string, error) {

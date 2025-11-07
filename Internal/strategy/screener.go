@@ -168,6 +168,18 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		signals = append(signals, fmt.Sprintf("Pattern: %s (%.0f%%)", analysis, confidence*100))
 	}
 
+	// Detect whale volume anomalies (institutional activity)
+	whales := DetectWhales(symbol, bars)
+	if len(whales) > 0 {
+		for _, whale := range whales {
+			// HIGH conviction whales get +5 score bonus
+			if whale.Conviction == "HIGH" {
+				score += 5
+				signals = append(signals, fmt.Sprintf("🐋 Whale %s: Z=%s", whale.Direction, whale.ZScore))
+			}
+		}
+	}
+
 	return score, signals, rsi, atr, nil
 }
 
