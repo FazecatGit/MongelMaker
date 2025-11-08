@@ -154,7 +154,11 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 	fmt.Println("Timestamp           | Close Price | Price Chg | Chg %  | Volume   | RSI    | ATR    | B/U Ratio | B/L Ratio | Analysis                  | Signals             ")
 	fmt.Println("--------------------|-------------|-----------|--------|----------|--------|--------|-----------|-----------|--------------------------|---------------------")
 
-	for _, bar := range bars {
+	var latestAnalysis string
+	var latestRSI *float64
+	var latestATR *float64
+
+	for i, bar := range bars {
 		priceChange := bar.Close - bar.Open
 		priceChangePercent := (bar.Close - bar.Open) / bar.Open * 100
 
@@ -200,6 +204,19 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 		bodyToUpperStr := fmt.Sprintf("%9.2f", metrics["BodyToUpper"])
 		bodyToLowerStr := fmt.Sprintf("%9.2f", metrics["BodyToLower"])
 		analysisStr := results["Analysis"]
+
+		// Save latest bar's analysis and indicators (first iteration since bars are reversed)
+		if i == 0 {
+			latestAnalysis = analysisStr
+			if hasRSI {
+				val := rsiVal
+				latestRSI = &val
+			}
+			if hasATR {
+				val := atrVal
+				latestATR = &val
+			}
+		}
 
 		// visualize signals - use stored RSI/ATR or fallback to price action
 		signalStr := ""
@@ -272,6 +289,9 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 			displayTimestamp, bar.Close, priceChange, priceChangePercent, bar.Volume, rsiStr, atrStr, bodyToUpperStr, bodyToLowerStr, analysisStr, signalStr)
 	}
 
+	// Display final signal recommendation (before whale events)
+	displayFinalSignal(bars, symbol, latestAnalysis, latestRSI, latestATR)
+
 	// Display whale events if database available
 	if queries != nil {
 		fmt.Println()
@@ -280,6 +300,35 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 
 	// Display support/resistance levels
 	displaySupportResistance(bars)
+}
+
+func displayFinalSignal(bars []datafeed.Bar, symbol string, analysis string, rsi, atr *float64) {
+	if len(bars) == 0 {
+		return
+	}
+
+	signal := strategy.CalculateSignal(rsi, atr, bars, symbol, analysis)
+
+	fmt.Println()
+	fmt.Println("═══════════════════════════════════════════════════════════════════════════════════")
+
+	recommendationStr := strategy.FormatSignal(signal)
+	fmt.Printf("🎯 FINAL RECOMMENDATION: %s\n", recommendationStr)
+
+	fmt.Printf("Reason: %s\n", signal.Reasoning)
+	fmt.Println("\nSignal Breakdown:")
+	for _, component := range signal.Components {
+		emoji := "🟢"
+		if component.Score < 0 {
+			emoji = "🔴"
+		}
+		fmt.Printf("  %s %-20s %+.1f (weight: %.0f%%)\n",
+			emoji,
+			component.Name,
+			component.Score,
+			component.Weight*100)
+	}
+	fmt.Println("═══════════════════════════════════════════════════════════════════════════════════")
 }
 
 func displayWhaleEventsInline(symbol string, queries *sqlc.Queries) {
