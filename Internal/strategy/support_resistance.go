@@ -36,12 +36,27 @@ func FindResistance(bars []types.Bar) float64 {
 	return highestHigh
 }
 
-// finds multiple resistance levels
+// finds multiple support levels (local minima/valleys)
+func GetSupportLevels(bars []types.Bar) []PriceLevel {
+	levels := []PriceLevel{}
+
+	for i := 1; i < len(bars)-1; i++ {
+		if bars[i].Low < bars[i-1].Low && bars[i].Low < bars[i+1].Low {
+			levels = append(levels, PriceLevel{
+				Price:      bars[i].Low,
+				BouncCount: 1,
+			})
+		}
+	}
+	return levels
+}
+
+// finds multiple resistance levels (local maxima/peaks)
 func GetResistanceLevels(bars []types.Bar) []PriceLevel {
 	levels := []PriceLevel{}
 
 	for i := 1; i < len(bars)-1; i++ {
-		if bars[i].High < bars[i-1].High && bars[i].High < bars[i+1].High {
+		if bars[i].High > bars[i-1].High && bars[i].High > bars[i+1].High {
 			levels = append(levels, PriceLevel{
 				Price:      bars[i].High,
 				BouncCount: 1,
@@ -77,4 +92,30 @@ func DistanceToResistance(currentPrice float64, resistance float64) float64 {
 		return 0
 	}
 	return ((resistance - currentPrice) / resistance) * 100
+}
+
+//  calculates classic pivot point
+func FindPivotPoint(bars []types.Bar) float64 {
+	if len(bars) == 0 {
+		return 0
+	}
+
+	latestBar := bars[0]
+	return (latestBar.High + latestBar.Low + latestBar.Close) / 3
+}
+
+// checks if price breaks above resistance with buffer
+func IsBreakoutAboveResistance(currentPrice float64, resistance float64) bool {
+	if resistance == 0 {
+		return false
+	}
+	return currentPrice > resistance*1.005 // 0.5% above resistance = breakout
+}
+
+// checks if price breaks below support with buffer
+func IsBreakoutBelowSupport(currentPrice float64, support float64) bool {
+	if support == 0 {
+		return false
+	}
+	return currentPrice < support*0.995 // 0.5% below support = breakdown
 }

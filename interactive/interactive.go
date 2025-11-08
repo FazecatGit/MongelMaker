@@ -277,6 +277,9 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 		fmt.Println()
 		displayWhaleEventsInline(symbol, queries)
 	}
+
+	// Display support/resistance levels
+	displaySupportResistance(bars)
 }
 
 func displayWhaleEventsInline(symbol string, queries *sqlc.Queries) {
@@ -333,6 +336,48 @@ func displayWhaleEventsInline(symbol string, queries *sqlc.Queries) {
 			convictionStr,
 		)
 	}
+	fmt.Println("═══════════════════════════════════════════════════════════════════════════════════")
+}
+
+func displaySupportResistance(bars []datafeed.Bar) {
+	if len(bars) == 0 {
+		return
+	}
+
+	support := strategy.FindSupport(bars)
+	resistance := strategy.FindResistance(bars)
+	pivot := strategy.FindPivotPoint(bars)
+	currentPrice := bars[0].Close
+
+	distanceToSupport := strategy.DistanceToSupport(currentPrice, support)
+	distanceToResistance := strategy.DistanceToResistance(currentPrice, resistance)
+
+	isAtSupportLevel := strategy.IsAtSupport(currentPrice, support)
+	isAtResistanceLevel := strategy.IsAtResistance(currentPrice, resistance)
+	isBreakoutUp := strategy.IsBreakoutAboveResistance(currentPrice, resistance)
+	isBreakoutDown := strategy.IsBreakoutBelowSupport(currentPrice, support)
+
+	fmt.Println()
+	fmt.Println("📊 SUPPORT & RESISTANCE LEVELS:")
+	fmt.Println("═══════════════════════════════════════════════════════════════════════════════════")
+	fmt.Printf("Current Price:  $%.2f\n", currentPrice)
+	fmt.Printf("Support Level:  $%.2f (%.2f%% below)  ", support, distanceToSupport)
+	if isAtSupportLevel {
+		fmt.Printf("🟢 AT SUPPORT - BUYING OPPORTUNITY")
+	} else if isBreakoutDown {
+		fmt.Printf("🔴 BROKEN SUPPORT - POSSIBLE SELL")
+	}
+	fmt.Println()
+
+	fmt.Printf("Resistance:     $%.2f (%.2f%% above)  ", resistance, distanceToResistance)
+	if isAtResistanceLevel {
+		fmt.Printf("🔴 AT RESISTANCE - SELLING PRESSURE")
+	} else if isBreakoutUp {
+		fmt.Printf("🟢 ABOVE RESISTANCE - BREAKOUT!")
+	}
+	fmt.Println()
+
+	fmt.Printf("Pivot Point:    $%.2f\n", pivot)
 	fmt.Println("═══════════════════════════════════════════════════════════════════════════════════")
 }
 

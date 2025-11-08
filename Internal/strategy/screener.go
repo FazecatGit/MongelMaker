@@ -21,13 +21,15 @@ type ScreenerCriteria struct {
 }
 
 type StockScore struct {
-	Symbol        string
-	Score         float64
-	Signals       []string
-	RSI           *float64
-	ATR           *float64
-	NewsSentiment SentimentScore
-	NewsImpact    float64
+	Symbol         string
+	Score          float64
+	Signals        []string
+	RSI            *float64
+	ATR            *float64
+	NewsSentiment  SentimentScore
+	NewsImpact     float64
+	FinalSignal    CombinedSignal
+	Recommendation string
 }
 
 func DefaultScreenerCriteria() ScreenerCriteria {
@@ -169,10 +171,30 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 			// HIGH conviction whales get +5 score bonus
 			if whale.Conviction == "HIGH" {
 				score += 5
-				signals = append(signals, fmt.Sprintf("🐋 Whale %s: Z=%s", whale.Direction, whale.ZScore))
+				signals = append(signals, fmt.Sprintf("🐋 Whale %s: Z=%.2f", whale.Direction, whale.ZScore))
 			}
 		}
 	}
+
+	// Support and resistance levels
+	support := FindSupport(bars)
+	resistance := FindResistance(bars)
+
+	currentPrice := latestBar.Close
+	if currentPrice < support*1.01 { // Within 1% of support
+		score += 15 // Strong buy signal
+		signals = append(signals, fmt.Sprintf("Near Support: $%.2f", support))
+	}
+	if currentPrice > resistance*0.99 { // Within 1% of resistance
+		score -= 10 // Sell signal
+		signals = append(signals, fmt.Sprintf("Near Resistance: $%.2f", resistance))
+	}
+
+	// Calculate combined signal (ensemble of all signals)
+	combinedSignal := CalculateSignal(rsi, atr, bars, symbol, analysis)
+
+	// Add combined signal to signals list
+	signals = append(signals, fmt.Sprintf("\n🎯 FINAL: %s", FormatSignal(combinedSignal)))
 
 	return score, signals, rsi, atr, nil
 }
