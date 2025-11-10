@@ -70,8 +70,7 @@ func (v *VWAPCalculator) CalculateRange(startIndex, endIndex int) float64 {
 	return typicalPrice / volume
 }
 
-// CalculateAllValues returns VWAP values for each bar in the dataset
-// Useful for charting or analysis
+// returns VWAP values for each bar in the dataset
 func (v *VWAPCalculator) CalculateAllValues() []float64 {
 	vwapValues := make([]float64, len(v.bars))
 
@@ -82,8 +81,7 @@ func (v *VWAPCalculator) CalculateAllValues() []float64 {
 	return vwapValues
 }
 
-// GetVWAPTrend returns whether price is above or below VWAP
-// Returns: 1 = above VWAP (bullish), -1 = below VWAP (bearish), 0 = at VWAP
+// returns whether price is above or below VWAP
 func (v *VWAPCalculator) GetVWAPTrend() int {
 	if len(v.bars) == 0 {
 		return 0
@@ -100,8 +98,7 @@ func (v *VWAPCalculator) GetVWAPTrend() int {
 	return 0
 }
 
-// GetVWAPDistance returns the percentage distance from current price to VWAP
-// Positive = price above VWAP, Negative = price below VWAP
+// returns the percentage distance from current price to VWAP
 func (v *VWAPCalculator) GetVWAPDistance() float64 {
 	if len(v.bars) == 0 {
 		return 0
@@ -117,8 +114,7 @@ func (v *VWAPCalculator) GetVWAPDistance() float64 {
 	return ((currentPrice - vwap) / vwap) * 100
 }
 
-// IsVWAPSupport checks if price is touching VWAP from above with tolerance
-// Useful for identifying support levels
+// checks if price is touching VWAP from above with tolerance
 func (v *VWAPCalculator) IsVWAPSupport(tolerance float64) bool {
 	if len(v.bars) < 2 {
 		return false
@@ -132,8 +128,7 @@ func (v *VWAPCalculator) IsVWAPSupport(tolerance float64) bool {
 	return previousPrice >= vwap && currentPrice <= vwap*(1+tolerance/100)
 }
 
-// IsVWAPResistance checks if price is touching VWAP from below with tolerance
-// Useful for identifying resistance levels
+// checks if price is touching VWAP from below with tolerance
 func (v *VWAPCalculator) IsVWAPResistance(tolerance float64) bool {
 	if len(v.bars) < 2 {
 		return false
@@ -147,7 +142,7 @@ func (v *VWAPCalculator) IsVWAPResistance(tolerance float64) bool {
 	return previousPrice <= vwap && currentPrice >= vwap*(1-tolerance/100)
 }
 
-// GetVWAPBounce detects if price bounced off VWAP
+// detects if price bounced off VWAP
 // Returns true if: price touched VWAP and then moved away
 func (v *VWAPCalculator) GetVWAPBounce(tolerance float64) (bool, string) {
 	if len(v.bars) < 3 {
@@ -172,7 +167,7 @@ func (v *VWAPCalculator) GetVWAPBounce(tolerance float64) (bool, string) {
 	return false, ""
 }
 
-// AnalyzeVWAP provides a comprehensive VWAP analysis
+// provides a comprehensive VWAP analysis
 func (v *VWAPCalculator) AnalyzeVWAP(tolerance float64) map[string]interface{} {
 	if len(v.bars) == 0 {
 		return map[string]interface{}{
@@ -209,7 +204,7 @@ func (v *VWAPCalculator) AnalyzeVWAP(tolerance float64) map[string]interface{} {
 	}
 }
 
-// typicalPrice calculates (High + Low + Close) / 3
+// calculates (High + Low + Close) / 3
 func (v *VWAPCalculator) typicalPrice(bar types.Bar) float64 {
 	return (bar.High + bar.Low + bar.Close) / 3
 }

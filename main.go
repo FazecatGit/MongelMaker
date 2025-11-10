@@ -187,6 +187,8 @@ func main() {
 		interactive.DisplayBasicData(bars, symbol, timeframe)
 		interactive.DisplayAdvancedData(bars, symbol, timeframe)
 		interactive.DisplayAnalyticsData(bars, symbol, timeframe, timezone, datafeed.Queries)
+	case "vwap":
+		interactive.DisplayVWAPAnalysis(bars, symbol, timeframe)
 	case "export":
 		records := interactive.PrepareExportData(bars, symbol, timezone)
 		var format string

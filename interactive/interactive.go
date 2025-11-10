@@ -9,6 +9,7 @@ import (
 	sqlc "github.com/fazecat/mongelmaker/Internal/database/sqlc"
 	"github.com/fazecat/mongelmaker/Internal/export"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
+	"github.com/fazecat/mongelmaker/Internal/types"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
@@ -488,12 +489,13 @@ func ShowDisplayMenu() (string, error) {
 	fmt.Println("4. All Data")
 	fmt.Println("5. Export Data")
 	fmt.Println("6. Stock Screener")
+	fmt.Println("7. vWAP Analysis")
 
 	fmt.Print("Enter choice: ")
 	var choice int
 	_, err := fmt.Scan(&choice)
 	if err != nil {
-		fmt.Println("Invalid input. Please enter a number between 1 and 6.")
+		fmt.Println("Invalid input. Please enter a number between 1 and 7.")
 		return "", err
 	}
 
@@ -510,6 +512,8 @@ func ShowDisplayMenu() (string, error) {
 		return "export", nil
 	case 6:
 		return "screener", nil
+	case 7:
+		return "vwap", nil
 	default:
 		fmt.Println("Invalid choice.")
 	}
@@ -655,4 +659,120 @@ func PrepareExportData(bars []datafeed.Bar, symbol string, timezone *time.Locati
 	}
 
 	return records
+}
+
+// DisplayVWAPAnalysis shows comprehensive vWAP analysis with support/resistance and bounce detection
+func DisplayVWAPAnalysis(bars []datafeed.Bar, symbol string, timeframe string) {
+	if len(bars) == 0 {
+		fmt.Printf("⚠️  No data available for %s\n", symbol)
+		return
+	}
+
+	if len(bars) < 3 {
+		fmt.Printf("⚠️  Need at least 3 bars for complete vWAP analysis\n")
+		return
+	}
+
+	// Convert Bar to types.Bar for vWAP calculation
+	typesBars := make([]types.Bar, len(bars))
+	for i := range bars {
+		typesBars[i] = types.Bar(bars[i])
+	}
+
+	vwapCalc := strategy.NewVWAPCalculator(typesBars)
+	analysis := vwapCalc.AnalyzeVWAP(1.0)
+
+	fmt.Printf("\n💰 vWAP (Volume Weighted Average Price) Analysis for %s (%s)\n", symbol, timeframe)
+	fmt.Println("==========================================\n")
+
+	//SECTION 1: Quick Summary
+	fmt.Println("📊 QUICK SUMMARY:")
+	for key, value := range analysis {
+		fmt.Printf("  %-18s: %v\n", key, value)
+	}
+
+	//SECTION 2: vWAP Details
+	fmt.Println("\n📈 vWAP DETAILS:")
+	allVWAPValues := vwapCalc.CalculateAllValues()
+	if len(allVWAPValues) > 0 {
+		fmt.Printf("  Min vWAP: %.2f\n", utils.Min(allVWAPValues...))
+		fmt.Printf("  Max vWAP: %.2f\n", utils.Max(allVWAPValues...))
+		fmt.Printf("  Current vWAP: %.2f\n", vwapCalc.Calculate())
+	}
+
+	// Bar-by-Bar Analysis
+	fmt.Println("\n📊 vWAP BY BAR:")
+	fmt.Println("Timestamp           | Close Price | vWAP       | Distance % | Trend")
+	fmt.Println("--------------------|-------------|------------|------------|---------")
+
+	for i, bar := range bars {
+		vwap := vwapCalc.CalculateAt(i)
+		distance := ((bar.Close - vwap) / vwap) * 100
+		trend := "---"
+
+		if bar.Close > vwap {
+			trend = "📈 Above"
+		} else if bar.Close < vwap {
+			trend = "📉 Below"
+		} else {
+			trend = "➡️  At"
+		}
+
+		fmt.Printf("%-20s | %11.2f | %10.2f | %10.2f | %s\n",
+			bar.Timestamp, bar.Close, vwap, distance, trend)
+	}
+
+	//Support/Resistance
+	fmt.Println("\n🎯 SUPPORT/RESISTANCE LEVELS:")
+	currentVWAP := vwapCalc.Calculate()
+	isSupport := vwapCalc.IsVWAPSupport(1.0)
+	isResistance := vwapCalc.IsVWAPResistance(1.0)
+
+	if isSupport {
+		fmt.Println("  ✅ vWAP is acting as SUPPORT")
+		fmt.Println("     → Price touched vWAP from above")
+		fmt.Println("     → Look for bounce UP")
+	} else if isResistance {
+		fmt.Println("  ✅ vWAP is acting as RESISTANCE")
+		fmt.Println("     → Price touched vWAP from below")
+		fmt.Println("     → Look for bounce DOWN")
+	} else {
+		fmt.Println("  ⚠️  vWAP is neither support nor resistance (no recent contact)")
+	}
+
+	// Bounce Detection
+	fmt.Println("\n🔄 BOUNCE DETECTION:")
+	isBounce, bounceType := vwapCalc.GetVWAPBounce(1.0)
+
+	if isBounce {
+		fmt.Printf("  ✅ BOUNCE DETECTED: %s\n", bounceType)
+		if bounceType == "bullish_bounce" {
+			fmt.Println("     → Price bounced UP from vWAP")
+			fmt.Println("     → Potential BUY signal 🟢")
+		} else if bounceType == "bearish_bounce" {
+			fmt.Println("     → Price bounced DOWN from vWAP")
+			fmt.Println("     → Potential SELL signal 🔴")
+		}
+	} else {
+		fmt.Println("  ⚠️  No bounce detected in last 3 bars")
+	}
+
+	//Trend Analysis
+	fmt.Println("\n📉 CURRENT TREND:")
+	trend := vwapCalc.GetVWAPTrend()
+	switch trend {
+	case 1:
+		fmt.Println("  📈 Price is ABOVE vWAP (Bullish)")
+		fmt.Println("     → Uptrend favors buyers")
+		fmt.Printf("     → Support level: vWAP at %.2f\n", currentVWAP)
+	case -1:
+		fmt.Println("  📉 Price is BELOW vWAP (Bearish)")
+		fmt.Println("     → Downtrend favors sellers")
+		fmt.Printf("     → Resistance level: vWAP at %.2f\n", currentVWAP)
+	default:
+		fmt.Println("  ➡️  Price is AT vWAP (Neutral)")
+		fmt.Println("     → Potential decision point")
+	}
+
+	fmt.Println("\n==========================================")
 }
