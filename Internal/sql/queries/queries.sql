@@ -111,3 +111,50 @@ LIMIT 10;
 INSERT INTO whale_events (
     symbol, timestamp, direction, volume, z_score, close_price, price_change, conviction
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+
+-- name: AddToWatchlist :exec
+-- Add a new candidate to watchlist
+INSERT INTO watchlist (symbol, asset_type, score, reason, added_date, last_updated, status)
+VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'active');
+
+-- name: GetWatchlist :many
+-- Get all active watchlist items, ordered by score
+SELECT id, symbol, asset_type, score, reason, added_date, last_updated
+FROM watchlist
+WHERE status = 'active'
+ORDER BY score DESC;
+
+-- name: UpdateWatchlistScore :exec
+-- Update score and add history entry
+UPDATE watchlist
+SET score = $1, last_updated = CURRENT_TIMESTAMP
+WHERE symbol = $2;
+
+-- name: AddWatchlistHistory :exec
+-- Log score change with full analysis data (as JSON)
+INSERT INTO watchlist_history (watchlist_id, old_score, new_score, analysis_data, timestamp)
+VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP);
+
+-- name: ArchiveOldWatchlist :exec
+-- Archive symbols with unchanged score for 30+ days
+UPDATE watchlist
+SET status = 'archived'
+WHERE id IN (
+  SELECT w.id FROM watchlist w
+  WHERE w.status = 'active'
+  AND datetime(w.last_updated) < datetime('now', '-30 days')
+);
+
+-- name: SkipSymbol :exec
+-- Add to skip backlog (recheck in 30 days)
+INSERT INTO skip_backlog (symbol, asset_type, reason, timestamp, recheck_after)
+VALUES ($1, $2, $3, CURRENT_TIMESTAMP, datetime('now', '+30 days'));
+
+-- name: GetRecheckableSymbols :many
+-- Get symbols from skip backlog that are ready for reconsideration
+SELECT symbol, asset_type, reason FROM skip_backlog
+WHERE recheck_after <= CURRENT_TIMESTAMP;
+
+-- name: RemoveFromSkipBacklog :exec
+-- Remove symbol from skip backlog after rechecking
+DELETE FROM skip_backlog WHERE symbol = $1;
