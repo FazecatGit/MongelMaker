@@ -1,5 +1,5 @@
 global:
-  martket_hours:
+  market_hours:
       regular_open: "09:30"
       regular_close: "16:00"
       premarket_open: "04:00"

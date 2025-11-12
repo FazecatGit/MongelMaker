@@ -10,6 +10,7 @@ type RetryConfig struct {
 	Delay      time.Duration // Initial delay between retries (e.g., 2 seconds)
 	Backoff    float64       // Multiplier for exponential backoff (e.g., 2.0)
 }
+
 func DefaultRetryConfig() *RetryConfig {
 	return &RetryConfig{
 		MaxRetries: 3,
@@ -34,27 +35,24 @@ func RetryWithBackoff(operation func() error, config *RetryConfig) error {
 	return fmt.Errorf("operation failed after %d attempts", config.MaxRetries)
 }
 
-//test code snippet usage:
-
 func TestRetryLogic() {
-    fmt.Println("🧪 Testing retry logic...")
-    
-    failCount := 0
-    config := DefaultRetryConfig()
-    
-    err := RetryWithBackoff(func() error {
-        failCount++
-        if failCount < 3 {
-            return fmt.Errorf("simulated failure %d", failCount)
-        }
-        fmt.Println("✅ Success on attempt", failCount)
-        return nil
-    }, config)
-    
-    if err != nil {
-        fmt.Printf("❌ Test failed: %v\n", err)
-    } else {
-        fmt.Println("✅ Retry test completed successfully!")
-    }
-}
+	fmt.Println("🧪 Testing retry logic...")
 
+	failCount := 0
+	config := DefaultRetryConfig()
+
+	err := RetryWithBackoff(func() error {
+		failCount++
+		if failCount < 3 {
+			return fmt.Errorf("simulated failure %d", failCount)
+		}
+		fmt.Println("✅ Success on attempt", failCount)
+		return nil
+	}, config)
+
+	if err != nil {
+		fmt.Printf("❌ Test failed: %v\n", err)
+	} else {
+		fmt.Println("✅ Retry test completed successfully!")
+	}
+}

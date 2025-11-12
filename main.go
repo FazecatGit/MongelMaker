@@ -61,6 +61,7 @@ func main() {
 	// Check market status
 	cfg, _ := utils.LoadConfig()
 	status, isOpen := utils.CheckMarketStatus(time.Now(), cfg)
+	fmt.Printf("📊 Market Status: %s (Open: %v)\n\n", status, isOpen)
 
 	// Initialize Finnhub client for news fetching
 	finnhubClient := newsscraping.NewFinnhubClient()
