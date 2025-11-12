@@ -1,0 +1,42 @@
+global:
+  martket_hours:
+      regular_open: "09:30"
+      regular_close: "16:00"
+      premarket_open: "04:00"
+      afterhours_close: "20:00"
+      timezone: "EST"
+
+      liquidity_minimum_usd: 10000000
+
+# Notification settings
+notifications:
+  channels:
+    console: true
+    file_log: true
+    discord: true
+  batch_digest_time: "08:00"  # When to batch send medium scores
+
+# Archive settings
+archive:
+  days_before_archive: 30
+  recheck_skip_after_days: 30
+
+# Risk profiles - each has different scan cadence
+profiles:
+  aggressive:
+    threshold: 3.5
+    scan_interval_days: 1      # Daily scan runs every 1 day
+    weekly_interval_days: 7    # Weekly scan runs every 7 days
+    monthly_interval_days: 30
+  
+  balanced:
+    threshold: 4.0
+    scan_interval_days: 3      # Daily scan runs every 3 days
+    weekly_interval_days: 14
+    monthly_interval_days: 60
+  
+  conservative:
+    threshold: 4.5
+    scan_interval_days: 7      # Daily scan runs every 7 days
+    weekly_interval_days: 21
+    monthly_interval_days: 90
