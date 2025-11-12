@@ -13,6 +13,7 @@ import (
 	"github.com/fazecat/mongelmaker/Internal/export"
 	newsscraping "github.com/fazecat/mongelmaker/Internal/news_scraping"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
+	"github.com/fazecat/mongelmaker/Internal/utils"
 	"github.com/fazecat/mongelmaker/interactive"
 	"github.com/joho/godotenv"
 )
@@ -56,6 +57,10 @@ func main() {
 		log.Fatalln(err)
 	}
 	defer resp.Body.Close()
+
+	// Check market status
+	cfg, _ := utils.LoadConfig()
+	status, isOpen := utils.CheckMarketStatus(time.Now(), cfg)
 
 	// Initialize Finnhub client for news fetching
 	finnhubClient := newsscraping.NewFinnhubClient()
