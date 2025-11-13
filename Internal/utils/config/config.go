@@ -1,4 +1,4 @@
-package utils
+package config
 
 import (
 	"os"
@@ -39,7 +39,7 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	data, err := os.ReadFile("config.yaml")
+	data, err := os.ReadFile("Internal/utils/config/config.yaml")
 	if err != nil {
 		return nil, err
 	}

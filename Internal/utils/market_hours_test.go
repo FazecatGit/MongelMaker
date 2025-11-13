@@ -3,10 +3,12 @@ package utils
 import (
 	"testing"
 	"time"
+
+	"github.com/fazecat/mongelmaker/Internal/utils/config"
 )
 
 // Create config once for all tests
-var testCfg = &Config{
+var testCfg = &config.Config{
 	Global: struct {
 		MarketHours struct {
 			RegularOpen    string `yaml:"regular_open"`

@@ -5,9 +5,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/fazecat/mongelmaker/Internal/utils/config"
 )
 
-func CheckMarketStatus(t time.Time, cfg *Config) (status string, isOpen bool) {
+func CheckMarketStatus(t time.Time, cfg *config.Config) (status string, isOpen bool) {
 	// 1. Convert input time to EST
 	timeInEST, err := time.LoadLocation("America/New_York")
 	if err != nil {

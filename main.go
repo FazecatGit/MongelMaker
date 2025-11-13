@@ -14,6 +14,7 @@ import (
 	newsscraping "github.com/fazecat/mongelmaker/Internal/news_scraping"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/Internal/utils"
+	"github.com/fazecat/mongelmaker/Internal/utils/config"
 	"github.com/fazecat/mongelmaker/interactive"
 	"github.com/joho/godotenv"
 )
@@ -59,7 +60,7 @@ func main() {
 	defer resp.Body.Close()
 
 	// Check market status
-	cfg, _ := utils.LoadConfig()
+	cfg, _ := config.LoadConfig()
 	status, isOpen := utils.CheckMarketStatus(time.Now(), cfg)
 	fmt.Printf("📊 Market Status: %s (Open: %v)\n\n", status, isOpen)
 
