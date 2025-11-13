@@ -13,6 +13,71 @@ import (
 	"github.com/lib/pq"
 )
 
+const addToWatchlist = `-- name: AddToWatchlist :one
+INSERT INTO watchlist (symbol, asset_type, score, reason, added_date, last_updated, status)
+VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'active')
+RETURNING id
+`
+
+type AddToWatchlistParams struct {
+	Symbol    string         `json:"symbol"`
+	AssetType string         `json:"asset_type"`
+	Score     float32        `json:"score"`
+	Reason    sql.NullString `json:"reason"`
+}
+
+// Add a new candidate to watchlist and return the ID
+func (q *Queries) AddToWatchlist(ctx context.Context, arg AddToWatchlistParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, addToWatchlist,
+		arg.Symbol,
+		arg.AssetType,
+		arg.Score,
+		arg.Reason,
+	)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
+const addWatchlistHistory = `-- name: AddWatchlistHistory :exec
+INSERT INTO watchlist_history (watchlist_id, old_score, new_score, analysis_data, timestamp)
+VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+`
+
+type AddWatchlistHistoryParams struct {
+	WatchlistID  int32           `json:"watchlist_id"`
+	OldScore     sql.NullFloat64 `json:"old_score"`
+	NewScore     float32         `json:"new_score"`
+	AnalysisData sql.NullString  `json:"analysis_data"`
+}
+
+// Log score change with full analysis data (as JSON)
+func (q *Queries) AddWatchlistHistory(ctx context.Context, arg AddWatchlistHistoryParams) error {
+	_, err := q.db.ExecContext(ctx, addWatchlistHistory,
+		arg.WatchlistID,
+		arg.OldScore,
+		arg.NewScore,
+		arg.AnalysisData,
+	)
+	return err
+}
+
+const archiveOldWatchlist = `-- name: ArchiveOldWatchlist :exec
+UPDATE watchlist
+SET status = 'archived'
+WHERE id IN (
+  SELECT w.id FROM watchlist w
+  WHERE w.status = 'active'
+  AND datetime(w.last_updated) < datetime('now', '-30 days')
+)
+`
+
+// Archive symbols with unchanged score for 30+ days
+func (q *Queries) ArchiveOldWatchlist(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, archiveOldWatchlist)
+	return err
+}
+
 const createWhaleEvent = `-- name: CreateWhaleEvent :exec
 INSERT INTO whale_events (
     symbol, timestamp, direction, volume, z_score, close_price, price_change, conviction
@@ -53,7 +118,7 @@ LIMIT 1
 `
 
 type GetATRRow struct {
-	AtrValue             string    `json:"atr_value"`
+	AtrValue             float32   `json:"atr_value"`
 	CalculationTimestamp time.Time `json:"calculation_timestamp"`
 }
 
@@ -81,7 +146,7 @@ type GetATRByTimestampRangeParams struct {
 
 type GetATRByTimestampRangeRow struct {
 	CalculationTimestamp time.Time `json:"calculation_timestamp"`
-	AtrValue             string    `json:"atr_value"`
+	AtrValue             float32   `json:"atr_value"`
 }
 
 func (q *Queries) GetATRByTimestampRange(ctx context.Context, arg GetATRByTimestampRangeParams) ([]GetATRByTimestampRangeRow, error) {
@@ -122,7 +187,7 @@ type GetATRForDateRangeParams struct {
 
 type GetATRForDateRangeRow struct {
 	CalculationTimestamp time.Time `json:"calculation_timestamp"`
-	AtrValue             string    `json:"atr_value"`
+	AtrValue             float32   `json:"atr_value"`
 }
 
 func (q *Queries) GetATRForDateRange(ctx context.Context, arg GetATRForDateRangeParams) ([]GetATRForDateRangeRow, error) {
@@ -336,7 +401,7 @@ LIMIT 1
 `
 
 type GetLatestRSIRow struct {
-	RsiValue             string    `json:"rsi_value"`
+	RsiValue             float32   `json:"rsi_value"`
 	CalculationTimestamp time.Time `json:"calculation_timestamp"`
 }
 
@@ -443,7 +508,7 @@ type GetRSIByTimestampRangeParams struct {
 
 type GetRSIByTimestampRangeRow struct {
 	CalculationTimestamp time.Time `json:"calculation_timestamp"`
-	RsiValue             string    `json:"rsi_value"`
+	RsiValue             float32   `json:"rsi_value"`
 }
 
 func (q *Queries) GetRSIByTimestampRange(ctx context.Context, arg GetRSIByTimestampRangeParams) ([]GetRSIByTimestampRangeRow, error) {
@@ -484,7 +549,7 @@ type GetRSIForDateRangeParams struct {
 
 type GetRSIForDateRangeRow struct {
 	CalculationTimestamp time.Time `json:"calculation_timestamp"`
-	RsiValue             string    `json:"rsi_value"`
+	RsiValue             float32   `json:"rsi_value"`
 }
 
 func (q *Queries) GetRSIForDateRange(ctx context.Context, arg GetRSIForDateRangeParams) ([]GetRSIForDateRangeRow, error) {
@@ -508,6 +573,122 @@ func (q *Queries) GetRSIForDateRange(ctx context.Context, arg GetRSIForDateRange
 		return nil, err
 	}
 	return items, nil
+}
+
+const getRecheckableSymbols = `-- name: GetRecheckableSymbols :many
+SELECT symbol, asset_type, reason FROM skip_backlog
+WHERE recheck_after <= CURRENT_TIMESTAMP
+`
+
+type GetRecheckableSymbolsRow struct {
+	Symbol    string         `json:"symbol"`
+	AssetType string         `json:"asset_type"`
+	Reason    sql.NullString `json:"reason"`
+}
+
+// Get symbols from skip backlog that are ready for reconsideration
+func (q *Queries) GetRecheckableSymbols(ctx context.Context) ([]GetRecheckableSymbolsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRecheckableSymbols)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRecheckableSymbolsRow
+	for rows.Next() {
+		var i GetRecheckableSymbolsRow
+		if err := rows.Scan(&i.Symbol, &i.AssetType, &i.Reason); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getWatchlist = `-- name: GetWatchlist :many
+SELECT id, symbol, asset_type, score, reason, added_date, last_updated
+FROM watchlist
+WHERE status = 'active'
+ORDER BY score DESC
+`
+
+type GetWatchlistRow struct {
+	ID          int32          `json:"id"`
+	Symbol      string         `json:"symbol"`
+	AssetType   string         `json:"asset_type"`
+	Score       float32        `json:"score"`
+	Reason      sql.NullString `json:"reason"`
+	AddedDate   sql.NullTime   `json:"added_date"`
+	LastUpdated sql.NullTime   `json:"last_updated"`
+}
+
+// Get all active watchlist items, ordered by score
+func (q *Queries) GetWatchlist(ctx context.Context) ([]GetWatchlistRow, error) {
+	rows, err := q.db.QueryContext(ctx, getWatchlist)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetWatchlistRow
+	for rows.Next() {
+		var i GetWatchlistRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Symbol,
+			&i.AssetType,
+			&i.Score,
+			&i.Reason,
+			&i.AddedDate,
+			&i.LastUpdated,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getWatchlistBySymbol = `-- name: GetWatchlistBySymbol :one
+SELECT id, symbol, asset_type, score, reason, added_date, last_updated
+FROM watchlist
+WHERE symbol = $1 AND status = 'active'
+`
+
+type GetWatchlistBySymbolRow struct {
+	ID          int32          `json:"id"`
+	Symbol      string         `json:"symbol"`
+	AssetType   string         `json:"asset_type"`
+	Score       float32        `json:"score"`
+	Reason      sql.NullString `json:"reason"`
+	AddedDate   sql.NullTime   `json:"added_date"`
+	LastUpdated sql.NullTime   `json:"last_updated"`
+}
+
+// Get a watchlist item by symbol
+func (q *Queries) GetWatchlistBySymbol(ctx context.Context, symbol string) (GetWatchlistBySymbolRow, error) {
+	row := q.db.QueryRowContext(ctx, getWatchlistBySymbol, symbol)
+	var i GetWatchlistBySymbolRow
+	err := row.Scan(
+		&i.ID,
+		&i.Symbol,
+		&i.AssetType,
+		&i.Score,
+		&i.Reason,
+		&i.AddedDate,
+		&i.LastUpdated,
+	)
+	return i, err
 }
 
 const getWhaleEventsBySymbol = `-- name: GetWhaleEventsBySymbol :many
@@ -556,6 +737,16 @@ func (q *Queries) GetWhaleEventsBySymbol(ctx context.Context, arg GetWhaleEvents
 	return items, nil
 }
 
+const removeFromSkipBacklog = `-- name: RemoveFromSkipBacklog :exec
+DELETE FROM skip_backlog WHERE symbol = $1
+`
+
+// Remove symbol from skip backlog after rechecking
+func (q *Queries) RemoveFromSkipBacklog(ctx context.Context, symbol string) error {
+	_, err := q.db.ExecContext(ctx, removeFromSkipBacklog, symbol)
+	return err
+}
+
 const saveATR = `-- name: SaveATR :exec
 INSERT INTO atr_calculation (symbol, calculation_timestamp, atr_value)
 VALUES ($1, $2, $3)
@@ -566,7 +757,7 @@ DO UPDATE SET atr_value = EXCLUDED.atr_value
 type SaveATRParams struct {
 	Symbol               string    `json:"symbol"`
 	CalculationTimestamp time.Time `json:"calculation_timestamp"`
-	AtrValue             string    `json:"atr_value"`
+	AtrValue             float32   `json:"atr_value"`
 }
 
 func (q *Queries) SaveATR(ctx context.Context, arg SaveATRParams) error {
@@ -611,10 +802,44 @@ DO UPDATE SET rsi_value = EXCLUDED.rsi_value
 type SaveRSIParams struct {
 	Symbol               string    `json:"symbol"`
 	CalculationTimestamp time.Time `json:"calculation_timestamp"`
-	RsiValue             string    `json:"rsi_value"`
+	RsiValue             float32   `json:"rsi_value"`
 }
 
 func (q *Queries) SaveRSI(ctx context.Context, arg SaveRSIParams) error {
 	_, err := q.db.ExecContext(ctx, saveRSI, arg.Symbol, arg.CalculationTimestamp, arg.RsiValue)
+	return err
+}
+
+const skipSymbol = `-- name: SkipSymbol :exec
+INSERT INTO skip_backlog (symbol, asset_type, reason, timestamp, recheck_after)
+VALUES ($1, $2, $3, CURRENT_TIMESTAMP, datetime('now', '+30 days'))
+`
+
+type SkipSymbolParams struct {
+	Symbol    string         `json:"symbol"`
+	AssetType string         `json:"asset_type"`
+	Reason    sql.NullString `json:"reason"`
+}
+
+// Add to skip backlog (recheck in 30 days)
+func (q *Queries) SkipSymbol(ctx context.Context, arg SkipSymbolParams) error {
+	_, err := q.db.ExecContext(ctx, skipSymbol, arg.Symbol, arg.AssetType, arg.Reason)
+	return err
+}
+
+const updateWatchlistScore = `-- name: UpdateWatchlistScore :exec
+UPDATE watchlist
+SET score = $1, last_updated = CURRENT_TIMESTAMP
+WHERE symbol = $2
+`
+
+type UpdateWatchlistScoreParams struct {
+	Score  float32 `json:"score"`
+	Symbol string  `json:"symbol"`
+}
+
+// Update score and add history entry
+func (q *Queries) UpdateWatchlistScore(ctx context.Context, arg UpdateWatchlistScoreParams) error {
+	_, err := q.db.ExecContext(ctx, updateWatchlistScore, arg.Score, arg.Symbol)
 	return err
 }

@@ -112,10 +112,11 @@ INSERT INTO whale_events (
     symbol, timestamp, direction, volume, z_score, close_price, price_change, conviction
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 
--- name: AddToWatchlist :exec
--- Add a new candidate to watchlist
+-- name: AddToWatchlist :one
+-- Add a new candidate to watchlist and return the ID
 INSERT INTO watchlist (symbol, asset_type, score, reason, added_date, last_updated, status)
-VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'active');
+VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'active')
+RETURNING id;
 
 -- name: GetWatchlist :many
 -- Get all active watchlist items, ordered by score
@@ -123,6 +124,12 @@ SELECT id, symbol, asset_type, score, reason, added_date, last_updated
 FROM watchlist
 WHERE status = 'active'
 ORDER BY score DESC;
+
+-- name: GetWatchlistBySymbol :one
+-- Get a watchlist item by symbol
+SELECT id, symbol, asset_type, score, reason, added_date, last_updated
+FROM watchlist
+WHERE symbol = $1 AND status = 'active';
 
 -- name: UpdateWatchlistScore :exec
 -- Update score and add history entry

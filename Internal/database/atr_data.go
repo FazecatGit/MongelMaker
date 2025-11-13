@@ -59,12 +59,10 @@ func FetchATRPrices(symbol string, limit int, timeframe string) ([]ATRBar, error
 }
 
 func SaveATR(symbol string, timestamp time.Time, atrValue float64) error {
-	atrValueStr := strconv.FormatFloat(atrValue, 'f', -1, 64)
-
 	params := database.SaveATRParams{
 		Symbol:               symbol,
 		CalculationTimestamp: timestamp,
-		AtrValue:             atrValueStr,
+		AtrValue:             float32(atrValue),
 	}
 	ctx := context.Background()
 	err := Queries.SaveATR(ctx, params)
@@ -89,8 +87,7 @@ func FetchATRForDisplay(symbol string, limit int) (map[string]float64, error) {
 	atrMap := make(map[string]float64)
 	for _, row := range rows {
 		dateStr := row.CalculationTimestamp.Format("2006-01-02 15:04:05")
-		atrVal, _ := strconv.ParseFloat(row.AtrValue, 64)
-		atrMap[dateStr] = atrVal
+		atrMap[dateStr] = float64(row.AtrValue)
 	}
 	return atrMap, nil
 }
@@ -110,8 +107,7 @@ func FetchATRByTimestampRange(symbol string, startTime, endTime time.Time) (map[
 	atrMap := make(map[string]float64)
 	for _, row := range rows {
 		dateStr := row.CalculationTimestamp.Format("2006-01-02 15:04:05")
-		atrVal, _ := strconv.ParseFloat(row.AtrValue, 64)
-		atrMap[dateStr] = atrVal
+		atrMap[dateStr] = float64(row.AtrValue)
 	}
 	return atrMap, nil
 }

@@ -10,11 +10,9 @@ import (
 )
 
 type AtrCalculation struct {
-	ID                   int32        `json:"id"`
-	Symbol               string       `json:"symbol"`
-	CalculationTimestamp time.Time    `json:"calculation_timestamp"`
-	AtrValue             string       `json:"atr_value"`
-	CreatedAt            sql.NullTime `json:"created_at"`
+	Symbol               string    `json:"symbol"`
+	CalculationTimestamp time.Time `json:"calculation_timestamp"`
+	AtrValue             float32   `json:"atr_value"`
 }
 
 type CandleDailyBollinger struct {
@@ -102,11 +100,9 @@ type Position struct {
 }
 
 type RsiCalculation struct {
-	ID                   int32        `json:"id"`
-	Symbol               string       `json:"symbol"`
-	CalculationTimestamp time.Time    `json:"calculation_timestamp"`
-	RsiValue             string       `json:"rsi_value"`
-	CreatedAt            sql.NullTime `json:"created_at"`
+	Symbol               string    `json:"symbol"`
+	CalculationTimestamp time.Time `json:"calculation_timestamp"`
+	RsiValue             float32   `json:"rsi_value"`
 }
 
 type ScoutList struct {
@@ -131,6 +127,15 @@ type Signal struct {
 	Executed     sql.NullBool   `json:"executed"`
 }
 
+type SkipBacklog struct {
+	ID           int32          `json:"id"`
+	Symbol       string         `json:"symbol"`
+	AssetType    string         `json:"asset_type"`
+	Reason       sql.NullString `json:"reason"`
+	Timestamp    sql.NullTime   `json:"timestamp"`
+	RecheckAfter time.Time      `json:"recheck_after"`
+}
+
 type SupportLevel struct {
 	ID         int32        `json:"id"`
 	Symbol     string       `json:"symbol"`
@@ -153,6 +158,26 @@ type Trade struct {
 	Status        sql.NullString `json:"status"`
 	CreatedAt     sql.NullTime   `json:"created_at"`
 	FilledAt      sql.NullTime   `json:"filled_at"`
+}
+
+type Watchlist struct {
+	ID          int32          `json:"id"`
+	Symbol      string         `json:"symbol"`
+	AssetType   string         `json:"asset_type"`
+	Score       float32        `json:"score"`
+	Reason      sql.NullString `json:"reason"`
+	AddedDate   sql.NullTime   `json:"added_date"`
+	LastUpdated sql.NullTime   `json:"last_updated"`
+	Status      sql.NullString `json:"status"`
+}
+
+type WatchlistHistory struct {
+	ID           int32           `json:"id"`
+	WatchlistID  int32           `json:"watchlist_id"`
+	OldScore     sql.NullFloat64 `json:"old_score"`
+	NewScore     float32         `json:"new_score"`
+	AnalysisData sql.NullString  `json:"analysis_data"`
+	Timestamp    sql.NullTime    `json:"timestamp"`
 }
 
 type WhaleAlert struct {

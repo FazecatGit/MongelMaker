@@ -37,12 +37,11 @@ func FetchClosingPrices(symbol string, days int, timeframe string) ([]float64, e
 
 	return closingPrices, nil
 }
-
 func SaveRSI(symbol string, timestamp time.Time, rsiValue float64) error {
 	params := database.SaveRSIParams{
 		Symbol:               symbol,
 		CalculationTimestamp: timestamp,
-		RsiValue:             strconv.FormatFloat(rsiValue, 'f', 2, 64),
+		RsiValue:             float32(rsiValue),
 	}
 	ctx := context.Background()
 	err := Queries.SaveRSI(ctx, params)
@@ -94,8 +93,7 @@ func FetchRSIForDisplay(symbol string, limit int) (map[string]float64, error) {
 	rsiMap := make(map[string]float64)
 	for _, row := range rows {
 		dateStr := row.CalculationTimestamp.Format("2006-01-02 15:04:05")
-		rsiVal, _ := strconv.ParseFloat(row.RsiValue, 64)
-		rsiMap[dateStr] = rsiVal
+		rsiMap[dateStr] = float64(row.RsiValue)
 	}
 	return rsiMap, nil
 }
@@ -115,8 +113,7 @@ func FetchRSIByTimestampRange(symbol string, startTime, endTime time.Time) (map[
 	rsiMap := make(map[string]float64)
 	for _, row := range rows {
 		dateStr := row.CalculationTimestamp.Format("2006-01-02 15:04:05")
-		rsiVal, _ := strconv.ParseFloat(row.RsiValue, 64)
-		rsiMap[dateStr] = rsiVal
+		rsiMap[dateStr] = float64(row.RsiValue)
 	}
 	return rsiMap, nil
 }
