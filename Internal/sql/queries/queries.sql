@@ -165,3 +165,27 @@ WHERE recheck_after <= CURRENT_TIMESTAMP;
 -- name: RemoveFromSkipBacklog :exec
 -- Remove symbol from skip backlog after rechecking
 DELETE FROM skip_backlog WHERE symbol = $1;
+
+-- Scan Log Queries
+
+-- name: GetScanLog :one
+-- Get the latest scan log entry for a profile
+SELECT id, profile_name, last_scan_timestamp, next_scan_due, symbols_scanned
+FROM scan_log
+WHERE profile_name = $1;
+
+-- name: UpsertScanLog :exec
+-- Insert or update scan log entry
+INSERT INTO scan_log (profile_name, last_scan_timestamp, next_scan_due, symbols_scanned)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (profile_name) DO UPDATE SET
+    last_scan_timestamp = EXCLUDED.last_scan_timestamp,
+    next_scan_due = EXCLUDED.next_scan_due,
+    symbols_scanned = EXCLUDED.symbols_scanned,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- name: GetAllScanLogs :many
+-- Get all scan log entries
+SELECT id, profile_name, last_scan_timestamp, next_scan_due, symbols_scanned
+FROM scan_log
+ORDER BY profile_name;

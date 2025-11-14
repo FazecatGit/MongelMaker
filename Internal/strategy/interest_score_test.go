@@ -2,10 +2,12 @@ package strategy
 
 import (
 	"testing"
+
+	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
 func TestCalculateInterestScore_NeutralConditions(t *testing.T) {
-	input := ScoringInput{
+	input := utils.ScoringInput{
 		CurrentPrice: 100,
 		VWAPPrice:    100,
 		ATRValue:     1.0,
@@ -23,7 +25,7 @@ func TestCalculateInterestScore_NeutralConditions(t *testing.T) {
 }
 
 func TestCalculateInterestScore_PriceDropBoost(t *testing.T) {
-	input := ScoringInput{
+	input := utils.ScoringInput{
 		CurrentPrice: 80,
 		VWAPPrice:    100,
 		ATRValue:     1.0,
@@ -40,7 +42,7 @@ func TestCalculateInterestScore_PriceDropBoost(t *testing.T) {
 }
 
 func TestCalculateInterestScore_HighWhaleActivity(t *testing.T) {
-	input := ScoringInput{
+	input := utils.ScoringInput{
 		CurrentPrice: 100,
 		VWAPPrice:    100,
 		ATRValue:     1.0,
@@ -57,7 +59,7 @@ func TestCalculateInterestScore_HighWhaleActivity(t *testing.T) {
 }
 
 func TestCalculateInterestScore_LowRSIPenalty(t *testing.T) {
-	input := ScoringInput{
+	input := utils.ScoringInput{
 		CurrentPrice: 100,
 		VWAPPrice:    100,
 		ATRValue:     1.0,
@@ -74,7 +76,7 @@ func TestCalculateInterestScore_LowRSIPenalty(t *testing.T) {
 }
 
 func TestCalculateInterestScore_HighATRAdjustment(t *testing.T) {
-	input := ScoringInput{
+	input := utils.ScoringInput{
 		CurrentPrice: 100,
 		VWAPPrice:    100,
 		ATRValue:     3.0,

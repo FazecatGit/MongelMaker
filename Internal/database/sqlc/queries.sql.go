@@ -263,6 +263,50 @@ func (q *Queries) GetATRPrices(ctx context.Context, arg GetATRPricesParams) ([]G
 	return items, nil
 }
 
+const getAllScanLogs = `-- name: GetAllScanLogs :many
+SELECT id, profile_name, last_scan_timestamp, next_scan_due, symbols_scanned
+FROM scan_log
+ORDER BY profile_name
+`
+
+type GetAllScanLogsRow struct {
+	ID                int32         `json:"id"`
+	ProfileName       string        `json:"profile_name"`
+	LastScanTimestamp time.Time     `json:"last_scan_timestamp"`
+	NextScanDue       time.Time     `json:"next_scan_due"`
+	SymbolsScanned    sql.NullInt32 `json:"symbols_scanned"`
+}
+
+// Get all scan log entries
+func (q *Queries) GetAllScanLogs(ctx context.Context) ([]GetAllScanLogsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllScanLogs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllScanLogsRow
+	for rows.Next() {
+		var i GetAllScanLogsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProfileName,
+			&i.LastScanTimestamp,
+			&i.NextScanDue,
+			&i.SymbolsScanned,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getClosingPrices = `-- name: GetClosingPrices :many
 SELECT close_price, timestamp
 FROM historical_bars
@@ -610,6 +654,36 @@ func (q *Queries) GetRecheckableSymbols(ctx context.Context) ([]GetRecheckableSy
 	return items, nil
 }
 
+const getScanLog = `-- name: GetScanLog :one
+
+SELECT id, profile_name, last_scan_timestamp, next_scan_due, symbols_scanned
+FROM scan_log
+WHERE profile_name = $1
+`
+
+type GetScanLogRow struct {
+	ID                int32         `json:"id"`
+	ProfileName       string        `json:"profile_name"`
+	LastScanTimestamp time.Time     `json:"last_scan_timestamp"`
+	NextScanDue       time.Time     `json:"next_scan_due"`
+	SymbolsScanned    sql.NullInt32 `json:"symbols_scanned"`
+}
+
+// Scan Log Queries
+// Get the latest scan log entry for a profile
+func (q *Queries) GetScanLog(ctx context.Context, profileName string) (GetScanLogRow, error) {
+	row := q.db.QueryRowContext(ctx, getScanLog, profileName)
+	var i GetScanLogRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileName,
+		&i.LastScanTimestamp,
+		&i.NextScanDue,
+		&i.SymbolsScanned,
+	)
+	return i, err
+}
+
 const getWatchlist = `-- name: GetWatchlist :many
 SELECT id, symbol, asset_type, score, reason, added_date, last_updated
 FROM watchlist
@@ -841,5 +915,33 @@ type UpdateWatchlistScoreParams struct {
 // Update score and add history entry
 func (q *Queries) UpdateWatchlistScore(ctx context.Context, arg UpdateWatchlistScoreParams) error {
 	_, err := q.db.ExecContext(ctx, updateWatchlistScore, arg.Score, arg.Symbol)
+	return err
+}
+
+const upsertScanLog = `-- name: UpsertScanLog :exec
+INSERT INTO scan_log (profile_name, last_scan_timestamp, next_scan_due, symbols_scanned)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (profile_name) DO UPDATE SET
+    last_scan_timestamp = EXCLUDED.last_scan_timestamp,
+    next_scan_due = EXCLUDED.next_scan_due,
+    symbols_scanned = EXCLUDED.symbols_scanned,
+    updated_at = CURRENT_TIMESTAMP
+`
+
+type UpsertScanLogParams struct {
+	ProfileName       string        `json:"profile_name"`
+	LastScanTimestamp time.Time     `json:"last_scan_timestamp"`
+	NextScanDue       time.Time     `json:"next_scan_due"`
+	SymbolsScanned    sql.NullInt32 `json:"symbols_scanned"`
+}
+
+// Insert or update scan log entry
+func (q *Queries) UpsertScanLog(ctx context.Context, arg UpsertScanLogParams) error {
+	_, err := q.db.ExecContext(ctx, upsertScanLog,
+		arg.ProfileName,
+		arg.LastScanTimestamp,
+		arg.NextScanDue,
+		arg.SymbolsScanned,
+	)
 	return err
 }

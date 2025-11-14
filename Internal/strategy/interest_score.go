@@ -2,17 +2,7 @@ package strategy
 
 import "github.com/fazecat/mongelmaker/Internal/utils"
 
-type ScoringInput struct {
-	CurrentPrice float64
-	VWAPPrice    float64
-	ATRValue     float64
-	RSIValue     float64
-	WhaleCount   float64
-	PriceDrop    float64
-	ATRCategory  string
-}
-
-func CalculateInterestScore(input ScoringInput) float64 {
+func CalculateInterestScore(input utils.ScoringInput) float64 {
 	baseScore := 5.0
 
 	priceDropMult := 1.0 + (input.PriceDrop/10)*0.1

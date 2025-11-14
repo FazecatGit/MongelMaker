@@ -105,6 +105,16 @@ type RsiCalculation struct {
 	RsiValue             float32   `json:"rsi_value"`
 }
 
+type ScanLog struct {
+	ID                int32         `json:"id"`
+	ProfileName       string        `json:"profile_name"`
+	LastScanTimestamp time.Time     `json:"last_scan_timestamp"`
+	NextScanDue       time.Time     `json:"next_scan_due"`
+	SymbolsScanned    sql.NullInt32 `json:"symbols_scanned"`
+	CreatedAt         sql.NullTime  `json:"created_at"`
+	UpdatedAt         sql.NullTime  `json:"updated_at"`
+}
+
 type ScoutList struct {
 	ID           int32          `json:"id"`
 	Symbol       string         `json:"symbol"`
