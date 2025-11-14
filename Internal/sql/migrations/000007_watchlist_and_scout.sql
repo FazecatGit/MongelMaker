@@ -1,7 +1,7 @@
 -- +goose Up
 -- Create watchlist table (main tracked candidates)
 CREATE TABLE watchlist (
-  id INTEGER PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   symbol TEXT NOT NULL UNIQUE,
   asset_type TEXT NOT NULL,
   score REAL NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE watchlist (
 
 -- Create history table (track score changes over time)
 CREATE TABLE watchlist_history (
-  id INTEGER PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   watchlist_id INTEGER NOT NULL,
   old_score REAL,
   new_score REAL NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE watchlist_history (
 
 -- Create skip table (rejected candidates with recheck date)
 CREATE TABLE skip_backlog (
-  id INTEGER PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   symbol TEXT NOT NULL UNIQUE,
   asset_type TEXT NOT NULL,
   reason TEXT,

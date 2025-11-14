@@ -12,7 +12,6 @@ import (
 	"github.com/fazecat/mongelmaker/Internal/utils/config"
 )
 
-// ShouldScan checks if it's time to scan based on profile and config
 func ShouldScan(ctx context.Context, profileName string, cfg *config.Config, q *database.Queries) (bool, error) {
 	scan, err := q.GetScanLog(ctx, profileName)
 	if err != nil {
@@ -57,8 +56,24 @@ func PerformScan(ctx context.Context, profileName string, cfg *config.Config, q 
 		}
 		rsiValue := rsiValues[len(rsiValues)-1]
 
+		if len(rsiValues) > 0 && len(bars) >= 14 {
+			startIdx := len(bars) - len(rsiValues)
+			for i, rsi := range rsiValues {
+				barIdx := startIdx + i
+				if barIdx >= 0 && barIdx < len(bars) {
+					timestamp, _ := time.Parse(time.RFC3339, bars[barIdx].Timestamp)
+					db.SaveRSI(symbol, timestamp, rsi)
+				}
+			}
+		}
+
 		atrValue := utils.CalculateATRFromBars(bars)
 		atrCategory := utils.CategorizeATRValue(atrValue, bars)
+
+		if len(bars) > 0 {
+			latestTimestamp, _ := time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
+			db.SaveATR(symbol, latestTimestamp, atrValue)
+		}
 
 		whaleEvents := strategy.DetectWhales("", bars)
 		whaleCount := len(whaleEvents)
@@ -71,7 +86,6 @@ func PerformScan(ctx context.Context, profileName string, cfg *config.Config, q 
 
 		score := strategy.CalculateInterestScore(scoringInput)
 
-		// Update watchlist score
 		err = q.UpdateWatchlistScore(ctx, database.UpdateWatchlistScoreParams{
 			Score:  float32(score),
 			Symbol: symbol,
@@ -83,7 +97,6 @@ func PerformScan(ctx context.Context, profileName string, cfg *config.Config, q 
 		scannedCount++
 	}
 
-	// 3. Update scan_log with timestamp and symbol count
 	err = q.UpsertScanLog(ctx, database.UpsertScanLogParams{
 		ProfileName:       profileName,
 		LastScanTimestamp: time.Now(),

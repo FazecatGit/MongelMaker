@@ -18,7 +18,6 @@ func FetchMarketData(symbol string, timeframe string, limit int, startDate strin
 		return nil, fmt.Errorf("timeframe cannot be empty")
 	}
 
-	// fetch enough bars for RSI/ATR calculations
 	if limit < 14 {
 		limit = 14
 	}
@@ -124,31 +123,52 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 	var atrMap map[string]float64
 	var err error
 
+	// Try to fetch from database first
 	if !startTime.IsZero() && !endTime.IsZero() {
 		rsiMap, err = datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
 		if err != nil {
-			fmt.Printf("⚠️  Could not fetch RSI data: %v\n", err)
 			rsiMap = make(map[string]float64)
 		}
 
 		atrMap, err = datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
 		if err != nil {
-			fmt.Printf("⚠️  Could not fetch ATR data: %v\n", err)
 			atrMap = make(map[string]float64)
 		}
 	} else {
-		// Fallback
-		fetchLimit := len(bars) * 10
-		rsiMap, err = datafeed.FetchRSIForDisplay(symbol, fetchLimit)
-		if err != nil {
-			fmt.Printf("⚠️  Could not fetch RSI data: %v\n", err)
-			rsiMap = make(map[string]float64)
+		rsiMap = make(map[string]float64)
+		atrMap = make(map[string]float64)
+	}
+
+	// If database is empty or has insufficient data, calculate from bars
+	if len(rsiMap) == 0 && len(bars) >= 14 {
+		closes := make([]float64, len(bars))
+		for i, bar := range bars {
+			closes[i] = bar.Close
 		}
 
-		atrMap, err = datafeed.FetchATRForDisplay(symbol, fetchLimit)
-		if err != nil {
-			fmt.Printf("⚠️  Could not fetch ATR data: %v\n", err)
-			atrMap = make(map[string]float64)
+		rsiValues, err := strategy.CalculateRSI(closes, 14)
+		if err == nil && len(rsiValues) > 0 {
+			// Map RSI values to timestamps
+			startIdx := len(bars) - len(rsiValues)
+			for i, rsi := range rsiValues {
+				barIdx := startIdx + i
+				if barIdx >= 0 && barIdx < len(bars) {
+					t, _ := time.Parse(time.RFC3339, bars[barIdx].Timestamp)
+					timestampStr := t.Format("2006-01-02 15:04:05")
+					rsiMap[timestampStr] = rsi
+				}
+			}
+		}
+	}
+
+	// Calculate ATR from bars if not in database
+	if len(atrMap) == 0 && len(bars) >= 14 {
+		atrValue := utils.CalculateATRFromBars(bars)
+		// Store same ATR for all recent bars (ATR is calculated for the full period)
+		for _, bar := range bars {
+			t, _ := time.Parse(time.RFC3339, bar.Timestamp)
+			timestampStr := t.Format("2006-01-02 15:04:05")
+			atrMap[timestampStr] = atrValue
 		}
 	}
 
@@ -206,7 +226,7 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 		bodyToLowerStr := fmt.Sprintf("%9.2f", metrics["BodyToLower"])
 		analysisStr := results["Analysis"]
 
-		// Save latest bar's analysis and indicators (first iteration since bars are reversed)
+		// Save latest bar's analysis and indicators
 		if i == 0 {
 			latestAnalysis = analysisStr
 			if hasRSI {
@@ -219,7 +239,7 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 			}
 		}
 
-		// visualize signals - use stored RSI/ATR or fallback to price action
+		// Generate combined signal string
 		signalStr := ""
 
 		// RSI Signal
@@ -630,7 +650,6 @@ func PrepareExportData(bars []datafeed.Bar, symbol string, timezone *time.Locati
 				signals = append(signals, "Low Vol")
 			}
 		} else {
-			// Fallback: Calculate volatility from price range (works for all asset classes)
 			priceRange := bar.High - bar.Low
 			rangePct := (priceRange / bar.Close) * 100
 
@@ -683,15 +702,14 @@ func DisplayVWAPAnalysis(bars []datafeed.Bar, symbol string, timeframe string) {
 	analysis := vwapCalc.AnalyzeVWAP(1.0)
 
 	fmt.Printf("\n💰 vWAP (Volume Weighted Average Price) Analysis for %s (%s)\n", symbol, timeframe)
-	fmt.Println("==========================================\n")
+	fmt.Println("==========================================")
+	fmt.Println()
 
-	//SECTION 1: Quick Summary
 	fmt.Println("📊 QUICK SUMMARY:")
 	for key, value := range analysis {
 		fmt.Printf("  %-18s: %v\n", key, value)
 	}
 
-	//SECTION 2: vWAP Details
 	fmt.Println("\n📈 vWAP DETAILS:")
 	allVWAPValues := vwapCalc.CalculateAllValues()
 	if len(allVWAPValues) > 0 {
@@ -700,7 +718,6 @@ func DisplayVWAPAnalysis(bars []datafeed.Bar, symbol string, timeframe string) {
 		fmt.Printf("  Current vWAP: %.2f\n", vwapCalc.Calculate())
 	}
 
-	// Bar-by-Bar Analysis
 	fmt.Println("\n📊 vWAP BY BAR:")
 	fmt.Println("Timestamp           | Close Price | vWAP       | Distance % | Trend")
 	fmt.Println("--------------------|-------------|------------|------------|---------")
@@ -722,7 +739,6 @@ func DisplayVWAPAnalysis(bars []datafeed.Bar, symbol string, timeframe string) {
 			bar.Timestamp, bar.Close, vwap, distance, trend)
 	}
 
-	//Support/Resistance
 	fmt.Println("\n🎯 SUPPORT/RESISTANCE LEVELS:")
 	currentVWAP := vwapCalc.Calculate()
 	isSupport := vwapCalc.IsVWAPSupport(1.0)
@@ -740,7 +756,6 @@ func DisplayVWAPAnalysis(bars []datafeed.Bar, symbol string, timeframe string) {
 		fmt.Println("  ⚠️  vWAP is neither support nor resistance (no recent contact)")
 	}
 
-	// Bounce Detection
 	fmt.Println("\n🔄 BOUNCE DETECTION:")
 	isBounce, bounceType := vwapCalc.GetVWAPBounce(1.0)
 
@@ -757,7 +772,6 @@ func DisplayVWAPAnalysis(bars []datafeed.Bar, symbol string, timeframe string) {
 		fmt.Println("  ⚠️  No bounce detected in last 3 bars")
 	}
 
-	//Trend Analysis
 	fmt.Println("\n📉 CURRENT TREND:")
 	trend := vwapCalc.GetVWAPTrend()
 	switch trend {

@@ -1,21 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
-	"github.com/fazecat/mongelmaker/Internal/export"
+	"github.com/fazecat/mongelmaker/Internal/handlers"
 	newsscraping "github.com/fazecat/mongelmaker/Internal/news_scraping"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 	"github.com/fazecat/mongelmaker/Internal/utils/config"
-	"github.com/fazecat/mongelmaker/interactive"
+	"github.com/fazecat/mongelmaker/Internal/utils/scanner"
 	"github.com/joho/godotenv"
 )
 
@@ -47,7 +47,7 @@ func main() {
 	req.Header.Set("APCA-API-KEY-ID", apiKey)
 	req.Header.Set("APCA-API-SECRET-KEY", secretKey)
 
-	account, err := alpclient.GetAccount()
+	_, err = alpclient.GetAccount()
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -66,159 +66,67 @@ func main() {
 
 	// Initialize Finnhub client for news fetching
 	finnhubClient := newsscraping.NewFinnhubClient()
+	_ = finnhubClient // TODO: Use if needed
 
-	// Show main menu
-	mainChoice, err := interactive.ShowMainMenu()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
+	// Start background scanner goroutine
+	ctx := context.Background()
+	go startBackgroundScanner(ctx, cfg)
 
-	// Show timeframe menu
-	timeframe, err := interactive.ShowTimeframeMenu()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
+	// Main event loop
+	for {
+		fmt.Println("\n--- MongelMaker Menu ---")
+		fmt.Println("1. Scan Watchlist")
+		fmt.Println("2. Analyze Single Stock")
+		fmt.Println("3. Run Screener")
+		fmt.Println("4. View Watchlist")
+		fmt.Println("5. Exit")
+		fmt.Print("Enter choice (1-5): ")
 
-	// Get number of bars to fetch/analyze from user
-	var numBars int
-	fmt.Print("\nHow many bars to fetch and analyze?: ")
-	fmt.Scan(&numBars)
-
-	var symbol string
-
-	// Handle single vs screener path
-	if mainChoice == "single" {
-		fmt.Print("\nEnter stock symbol to analyze (e.g., AAPL, TSLA, MSFT): ")
-		fmt.Scan(&symbol)
-	} else if mainChoice == "screener" {
-		fmt.Println("\n🕵️  Stock Screener")
-		symbols := strategy.GetPopularStocks()[:50] // Top 50 stocks
-		fmt.Printf("Screening %d popular stocks...\n", len(symbols))
-		results, err := strategy.ScreenStocks(symbols, timeframe, numBars, strategy.DefaultScreenerCriteria(), nil)
+		var choice int
+		_, err := fmt.Scanln(&choice)
 		if err != nil {
-			fmt.Printf("Screener failed: %v\n", err)
+			fmt.Println("Invalid input. Try again.")
+			continue
+		}
+
+		switch choice {
+		case 1:
+			handlers.HandleScan(ctx, cfg, datafeed.Queries)
+		case 2:
+			handlers.HandleAnalyzeSingle(ctx, datafeed.Queries)
+		case 3:
+			handlers.HandleScreener(ctx, cfg, datafeed.Queries)
+		case 4:
+			handlers.HandleWatchlist(ctx, datafeed.Queries)
+		case 5:
+			fmt.Println("Goodbye!")
 			return
+		default:
+			fmt.Println("Invalid choice. Try again.")
 		}
+	}
+}
 
-		if len(results) == 0 {
-			fmt.Println("❌ No stocks matched the screener criteria. Try a different timeframe or number of bars.")
+func startBackgroundScanner(ctx context.Context, cfg *config.Config) {
+	log.Println("Background scanner started...")
+	ticker := time.NewTicker(15 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		select {
+		case <-ctx.Done():
+			log.Println("Background scanner stopped")
 			return
-		}
-
-		// Display screener results
-		fmt.Println("\n📈 Screener Results (Top Matches):")
-		fmt.Println("Symbol | Score | RSI  | ATR  | Signals")
-		fmt.Println("-------|-------|------|------|--------")
-		for _, res := range results {
-			rsiStr := "-"
-			if res.RSI != nil {
-				rsiStr = fmt.Sprintf("%.1f", *res.RSI)
+		default:
+			log.Println("Background scanner tick - checking for scans...")
+			_, err := scanner.PerformScan(ctx, "default", cfg, datafeed.Queries)
+			if err != nil {
+				log.Printf("Background scan error: %v", err)
+			} else {
+				log.Println("Background scan completed successfully")
 			}
-			atrStr := "-"
-			if res.ATR != nil {
-				atrStr = fmt.Sprintf("%.2f", *res.ATR)
-			}
-			signals := strings.Join(res.Signals, ", ")
-			if len(signals) > 30 {
-				signals = signals[:27] + "..."
-			}
-			fmt.Printf("%-6s | %5.1f | %4s | %4s | %s\n", res.Symbol, res.Score, rsiStr, atrStr, signals)
-		}
-
-		// Let user pick a stock from results
-		symbol, err = interactive.PickStockFromResults(results)
-		if err != nil {
-			fmt.Println("Error picking stock:", err)
-			return
 		}
 	}
-
-	// Calculate indicators and fetch data for chosen symbol
-	testIndicators(symbol, numBars, timeframe)
-
-	// Fetch news for the chosen stock with Finnhub
-	fmt.Printf("\n📰 Fetching news for %s...\n", symbol)
-	news, err := finnhubClient.FetchNews(symbol, 5)
-	if err != nil {
-		fmt.Printf("⚠️  Could not fetch news: %v\n", err)
-	} else if len(news) > 0 {
-		fmt.Println("\n📰 Latest News Headlines:")
-		for i, article := range news {
-			sentimentEmoji := "➡️ "
-			if article.Sentiment == newsscraping.Positive {
-				sentimentEmoji = "📈"
-			} else if article.Sentiment == newsscraping.Negative {
-				sentimentEmoji = "📉"
-			}
-
-			impactStr := fmt.Sprintf("%.0f%%", article.Impact*100)
-
-			fmt.Printf("\n%d. %s %s | Catalyst: %s | Impact: %s\n",
-				i+1, sentimentEmoji, article.Sentiment, article.CatalystType, impactStr)
-			fmt.Printf("   📰 %s\n", article.Headline)
-			fmt.Printf("   🔗 %s\n", article.URL)
-			fmt.Printf("   📅 %s\n", article.PublishedAt.Format("2006-01-02 15:04 MST"))
-		}
-	}
-
-	bars, err := interactive.FetchMarketData(symbol, timeframe, numBars, "")
-	if err != nil {
-		fmt.Println("Error fetching market data:", err)
-		return
-	}
-
-	// Show display menu
-	displayChoice, err := interactive.ShowDisplayMenu()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-
-	timezone, err := interactive.ShowTimezoneMenu()
-	if err != nil {
-		fmt.Println("Error selecting timezone, using UTC:", err)
-		timezone = time.UTC
-	}
-
-	// Call the appropriate display function based on choice
-	switch displayChoice {
-	case "basic":
-		interactive.DisplayBasicData(bars, symbol, timeframe)
-	case "full":
-		interactive.DisplayAdvancedData(bars, symbol, timeframe)
-	case "analytics":
-		interactive.DisplayAnalyticsData(bars, symbol, timeframe, timezone, datafeed.Queries)
-	case "all":
-		interactive.DisplayBasicData(bars, symbol, timeframe)
-		interactive.DisplayAdvancedData(bars, symbol, timeframe)
-		interactive.DisplayAnalyticsData(bars, symbol, timeframe, timezone, datafeed.Queries)
-	case "vwap":
-		interactive.DisplayVWAPAnalysis(bars, symbol, timeframe)
-	case "export":
-		records := interactive.PrepareExportData(bars, symbol, timezone)
-		var format string
-		fmt.Print("Enter export format (csv or json): ")
-		fmt.Scan(&format)
-		var filename string
-		fmt.Print("Enter filename (e.g., data.csv): ")
-		fmt.Scan(&filename)
-		err := export.ExportData(format, filename, records)
-		if err != nil {
-			fmt.Printf("Export failed: %v\n", err)
-		} else {
-			fmt.Printf("✅ Exported to exported_data/%s\n", filename)
-		}
-	default:
-		fmt.Println("Invalid display choice.")
-	}
-
-	fmt.Printf("\n✅ Analyzed %d bars for %s on %s timeframe\n", len(bars), symbol, timeframe)
-
-	balanceChange := account.Equity.Sub(account.LastEquity)
-
-	fmt.Println("Status:", resp.Status, balanceChange)
 }
 
 func testIndicators(symbol string, numBars int, timeframe string) {
