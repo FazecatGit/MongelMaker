@@ -12,7 +12,6 @@ import (
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	"github.com/fazecat/mongelmaker/Internal/handlers"
 	newsscraping "github.com/fazecat/mongelmaker/Internal/news_scraping"
-	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 	"github.com/fazecat/mongelmaker/Internal/utils/config"
 	"github.com/fazecat/mongelmaker/Internal/utils/scanner"
@@ -127,36 +126,4 @@ func startBackgroundScanner(ctx context.Context, cfg *config.Config) {
 			}
 		}
 	}
-}
-
-func testIndicators(symbol string, numBars int, timeframe string) {
-	log.Println("🧪 Calculating RSI and ATR indicators...")
-
-	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, numBars, "")
-	if err != nil {
-		log.Printf("Failed to fetch data: %v", err)
-		return
-	}
-	log.Printf("✅ Fetched %d bars", len(bars))
-
-	err = datafeed.StoreBarsWithAnalytics(symbol, timeframe, bars)
-	if err != nil {
-		log.Printf("Failed to store bars: %v", err)
-		return
-	}
-	log.Println("✅ Stored bars in database")
-
-	err = strategy.CalculateAndStoreRSI(symbol, 14, timeframe, numBars)
-	if err != nil {
-		log.Printf("Failed to calculate RSI: %v", err)
-		return
-	}
-	log.Println("✅ RSI calculation and storage successful!")
-
-	err = strategy.CalculateAndStoreATR(symbol, 14, timeframe, numBars)
-	if err != nil {
-		log.Printf("Failed to calculate ATR: %v", err)
-		return
-	}
-	log.Println("✅ ATR calculation and storage successful!")
 }

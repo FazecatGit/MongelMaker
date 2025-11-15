@@ -86,7 +86,13 @@ func TestCalculateAndStoreRSI(t *testing.T) {
 	timeframe := "1Day"
 	limit := 100
 
-	err = CalculateAndStoreRSI(symbol, 14, timeframe, limit)
+	bars, err := datafeed.GetAlpacaBars(symbol, timeframe, limit, "")
+	if err != nil {
+		t.Errorf("GetAlpacaBars() error = %v", err)
+		return
+	}
+
+	err = datafeed.CalculateAndStoreRSI(symbol, bars)
 	if err != nil {
 		t.Errorf("CalculateAndStoreRSI() error = %v", err)
 	}

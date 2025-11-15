@@ -1,8 +1,10 @@
-package utils
+package scoring
 
-import "github.com/fazecat/mongelmaker/Internal/types"
+import (
+	"github.com/fazecat/mongelmaker/Internal/types"
+	"github.com/fazecat/mongelmaker/Internal/utils"
+)
 
-// ScoringInput holds all indicator data needed for scoring
 type ScoringInput struct {
 	CurrentPrice float64
 	VWAPPrice    float64
@@ -48,7 +50,7 @@ func CalculateATRFromBars(bars []types.Bar) float64 {
 		high := bars[i].High
 		low := bars[i].Low
 		prevClose := bars[i-1].Close
-		tr := Max(high-low, Abs(high-prevClose), Abs(low-prevClose))
+		tr := utils.Max(high-low, utils.Abs(high-prevClose), utils.Abs(low-prevClose))
 		trueRanges[i] = tr
 	}
 
@@ -57,7 +59,7 @@ func CalculateATRFromBars(bars []types.Bar) float64 {
 		period = len(trueRanges) - 1
 	}
 
-	return Average(trueRanges[len(trueRanges)-period:])
+	return utils.Average(trueRanges[len(trueRanges)-period:])
 }
 
 func CategorizeATRValue(currentATR float64, bars []types.Bar) string {
@@ -78,7 +80,7 @@ func CategorizeATRValue(currentATR float64, bars []types.Bar) string {
 		return "NORMAL"
 	}
 
-	avgATR := Average(atrValues)
+	avgATR := utils.Average(atrValues)
 
 	if currentATR < avgATR*0.5 {
 		return "LOW"
@@ -86,4 +88,20 @@ func CategorizeATRValue(currentATR float64, bars []types.Bar) string {
 		return "HIGH"
 	}
 	return "NORMAL"
+}
+
+func ScoreCategory(score float64) string {
+	if score >= 8.0 {
+		return "🟢 Excellent"
+	}
+	if score >= 6.0 {
+		return "🟢 Good"
+	}
+	if score >= 4.0 {
+		return "🟡 Fair"
+	}
+	if score >= 2.0 {
+		return "🟠 Moderate"
+	}
+	return "🔴 Poor"
 }

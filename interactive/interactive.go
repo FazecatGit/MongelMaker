@@ -11,6 +11,7 @@ import (
 	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/Internal/types"
 	"github.com/fazecat/mongelmaker/Internal/utils"
+	"github.com/fazecat/mongelmaker/Internal/utils/scoring"
 )
 
 func FetchMarketData(symbol string, timeframe string, limit int, startDate string) ([]datafeed.Bar, error) {
@@ -163,7 +164,7 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 
 	// Calculate ATR from bars if not in database
 	if len(atrMap) == 0 && len(bars) >= 14 {
-		atrValue := utils.CalculateATRFromBars(bars)
+		atrValue := scoring.CalculateATRFromBars(bars)
 		// Store same ATR for all recent bars (ATR is calculated for the full period)
 		for _, bar := range bars {
 			t, _ := time.Parse(time.RFC3339, bar.Timestamp)

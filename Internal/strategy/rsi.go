@@ -3,7 +3,6 @@ package strategy
 import (
 	"fmt"
 
-	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
@@ -53,35 +52,4 @@ func DetermineRSISignal(rsiValue float64) string {
 		return "overbought"
 	}
 	return "neutral"
-}
-
-func CalculateAndStoreRSI(symbol string, period int, timeframe string, limit int) error {
-	pricePoints, err := datafeed.FetchPricePoints(symbol, limit, timeframe)
-	if err != nil {
-		return fmt.Errorf("failed to fetch price points: %w", err)
-	}
-
-	closes := make([]float64, len(pricePoints))
-	for i, pp := range pricePoints {
-		closes[i] = pp.Price
-	}
-
-	rsiValues, err := CalculateRSI(closes, period)
-	if err != nil {
-		return fmt.Errorf("failed to calculate RSI: %w", err)
-	}
-
-	for i := period; i < len(pricePoints); i++ {
-		err = datafeed.SaveRSI(symbol,
-			pricePoints[i].Timestamp,
-			rsiValues[i])
-		if err != nil {
-			return fmt.Errorf("failed to save RSI for timestamp %s: %w",
-				pricePoints[i].Timestamp.Format("2006-01-02 15:04:05"), err)
-		}
-	}
-
-	latestRSI := rsiValues[len(rsiValues)-1]
-	fmt.Printf("✅ Saved %d RSI values for %s. Latest: %.2f\n", len(pricePoints)-period, symbol, latestRSI)
-	return nil
 }

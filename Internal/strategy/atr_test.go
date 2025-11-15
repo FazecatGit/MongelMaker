@@ -2,19 +2,17 @@ package strategy
 
 import (
 	"testing"
-	"time"
 
-	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
 func TestCalculateATR(t *testing.T) {
-	atrBars := []datafeed.ATRBar{
-		{High: 15.0, Low: 10.0, Close: 12.0, Timestamp: time.Now()},
-		{High: 16.0, Low: 11.0, Close: 15.0, Timestamp: time.Now()},
-		{High: 18.0, Low: 14.0, Close: 17.0, Timestamp: time.Now()},
-		{High: 50.0, Low: 20.0, Close: 35.0, Timestamp: time.Now()},
-		{High: 25.0, Low: 12.0, Close: 20.0, Timestamp: time.Now()},
+	atrBars := []ATRBar{
+		{High: 15.0, Low: 10.0, Close: 12.0},
+		{High: 16.0, Low: 11.0, Close: 15.0},
+		{High: 18.0, Low: 14.0, Close: 17.0},
+		{High: 50.0, Low: 20.0, Close: 35.0},
+		{High: 25.0, Low: 12.0, Close: 20.0},
 	}
 	period := 3
 	expectedATR := []float64{0, 0, 0, 14.0, 20.0}
@@ -75,12 +73,12 @@ func TestCalculateTrueRangeWithGaps(t *testing.T) {
 }
 
 func TestCalculateATR_HighVolatility(t *testing.T) {
-	atrBars := []datafeed.ATRBar{
+	atrBars := []ATRBar{
 		// Large ranges, big movements
-		{High: 110.0, Low: 100.0, Close: 105.0, Timestamp: time.Now()},
-		{High: 120.0, Low: 105.0, Close: 118.0, Timestamp: time.Now()},
-		{High: 125.0, Low: 112.0, Close: 115.0, Timestamp: time.Now()},
-		{High: 130.0, Low: 115.0, Close: 125.0, Timestamp: time.Now()},
+		{High: 110.0, Low: 100.0, Close: 105.0},
+		{High: 120.0, Low: 105.0, Close: 118.0},
+		{High: 125.0, Low: 112.0, Close: 115.0},
+		{High: 130.0, Low: 115.0, Close: 125.0},
 	}
 	period := 3
 	expectedATR := []float64{0, 0, 0, 14.333333333}
@@ -96,12 +94,12 @@ func TestCalculateATR_HighVolatility(t *testing.T) {
 }
 
 func TestCalculateATR_LowVolatility(t *testing.T) {
-	atrBars := []datafeed.ATRBar{
+	atrBars := []ATRBar{
 		// Small ranges, consistent movement
-		{High: 100.5, Low: 100.0, Close: 100.2, Timestamp: time.Now()},
-		{High: 100.8, Low: 100.3, Close: 100.6, Timestamp: time.Now()},
-		{High: 101.0, Low: 100.5, Close: 100.8, Timestamp: time.Now()},
-		{High: 101.2, Low: 100.7, Close: 101.0, Timestamp: time.Now()},
+		{High: 100.5, Low: 100.0, Close: 100.2},
+		{High: 100.8, Low: 100.3, Close: 100.6},
+		{High: 101.0, Low: 100.5, Close: 100.8},
+		{High: 101.2, Low: 100.7, Close: 101.0},
 	}
 	period := 3
 	expectedATR := []float64{0, 0, 0, 0.5333333333}
@@ -117,11 +115,11 @@ func TestCalculateATR_LowVolatility(t *testing.T) {
 }
 
 func TestCalculateATR_InsufficientData(t *testing.T) {
-	atrBars := []datafeed.ATRBar{
-		{High: 100.0, Low: 95.0, Close: 98.0, Timestamp: time.Now()},
-		{High: 102.0, Low: 97.0, Close: 100.0, Timestamp: time.Now()},
-		{High: 101.0, Low: 96.0, Close: 99.0, Timestamp: time.Now()},
-		{High: 103.0, Low: 98.0, Close: 101.0, Timestamp: time.Now()},
+	atrBars := []ATRBar{
+		{High: 100.0, Low: 95.0, Close: 98.0},
+		{High: 102.0, Low: 97.0, Close: 100.0},
+		{High: 101.0, Low: 96.0, Close: 99.0},
+		{High: 103.0, Low: 98.0, Close: 101.0},
 	}
 	period := 14 // Not enough bars!
 

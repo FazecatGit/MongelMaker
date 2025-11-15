@@ -8,8 +8,8 @@ import (
 	db "github.com/fazecat/mongelmaker/Internal/database"
 	database "github.com/fazecat/mongelmaker/Internal/database/sqlc"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
-	"github.com/fazecat/mongelmaker/Internal/utils"
 	"github.com/fazecat/mongelmaker/Internal/utils/config"
+	"github.com/fazecat/mongelmaker/Internal/utils/scoring"
 )
 
 func ShouldScan(ctx context.Context, profileName string, cfg *config.Config, q *database.Queries) (bool, error) {
@@ -67,8 +67,8 @@ func PerformScan(ctx context.Context, profileName string, cfg *config.Config, q 
 			}
 		}
 
-		atrValue := utils.CalculateATRFromBars(bars)
-		atrCategory := utils.CategorizeATRValue(atrValue, bars)
+		atrValue := scoring.CalculateATRFromBars(bars)
+		atrCategory := scoring.CategorizeATRValue(atrValue, bars)
 
 		if len(bars) > 0 {
 			latestTimestamp, _ := time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
@@ -79,7 +79,7 @@ func PerformScan(ctx context.Context, profileName string, cfg *config.Config, q 
 		whaleCount := len(whaleEvents)
 
 		// Build scoring input with calculated indicators
-		scoringInput, err := utils.BuildScoringInput(bars, vwapPrice, rsiValue, whaleCount, atrValue, atrCategory)
+		scoringInput, err := scoring.BuildScoringInput(bars, vwapPrice, rsiValue, whaleCount, atrValue, atrCategory)
 		if err != nil {
 			continue
 		}

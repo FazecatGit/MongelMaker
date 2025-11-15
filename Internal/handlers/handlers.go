@@ -7,12 +7,14 @@ import (
 	"os"
 	"strings"
 
+	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	database "github.com/fazecat/mongelmaker/Internal/database/sqlc"
 	"github.com/fazecat/mongelmaker/Internal/database/watchlist"
 	newsscraping "github.com/fazecat/mongelmaker/Internal/news_scraping"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/Internal/utils/config"
 	"github.com/fazecat/mongelmaker/Internal/utils/scanner"
+	"github.com/fazecat/mongelmaker/Internal/utils/scoring"
 	"github.com/fazecat/mongelmaker/interactive"
 )
 
@@ -65,7 +67,6 @@ func HandleScan(ctx context.Context, cfg *config.Config, q *database.Queries) {
 }
 
 func HandleAnalyzeSingle(ctx context.Context, q *database.Queries) {
-	// 1. Prompt for symbol
 	fmt.Print("Enter stock symbol (e.g., AAPL): ")
 	var symbol string
 	_, err := fmt.Scanln(&symbol)
@@ -87,14 +88,24 @@ func HandleAnalyzeSingle(ctx context.Context, q *database.Queries) {
 		numBars = 100
 	}
 
-	// 4. Fetch and analyze
 	bars, err := interactive.FetchMarketData(symbol, timeframe, numBars, "")
 	if err != nil {
 		fmt.Printf("❌ Failed to fetch data: %v\n", err)
 		return
 	}
 
-	// 5. Display results
+	err = datafeed.CalculateAndStoreRSI(symbol, bars)
+	if err != nil {
+		fmt.Printf("❌ Failed to calculate and store RSI: %v\n", err)
+		return
+	}
+
+	err = datafeed.CalculateAndStoreATR(symbol, bars)
+	if err != nil {
+		fmt.Printf("❌ Failed to calculate and store ATR: %v\n", err)
+		return
+	}
+
 	displayChoice, _ := interactive.ShowDisplayMenu()
 	clearInputBuffer() // Clear any leftover input from menu selection
 
@@ -264,7 +275,6 @@ func HandleScreener(ctx context.Context, cfg *config.Config, q *database.Queries
 	fmt.Print("\n➕ Add to watchlist? (y/n): ")
 	var addChoice string
 	fmt.Scanln(&addChoice)
-	clearInputBuffer() // Clear any leftover input
 
 	if strings.ToLower(addChoice) == "y" {
 		reason := "Added from screener"
@@ -311,8 +321,8 @@ func HandleWatchlist(ctx context.Context, q *database.Queries) {
 			return
 		}
 		fmt.Println("\n📊 Current Watchlist:")
-		fmt.Println("Symbol | Score | Added Date | Last Updated")
-		fmt.Println("-------|-------|------------|--------------")
+		fmt.Println("Symbol | Score | Added Date | Last Updated | Category")
+		fmt.Println("-------|-------|------------|--------------|---------")
 		for _, item := range watchlist {
 			addedStr := "N/A"
 			if item.AddedDate.Valid {
@@ -322,7 +332,7 @@ func HandleWatchlist(ctx context.Context, q *database.Queries) {
 			if item.LastUpdated.Valid {
 				updatedStr = item.LastUpdated.Time.Format("2006-01-02")
 			}
-			fmt.Printf("%s | %.2f | %s | %s\n", item.Symbol, item.Score, addedStr, updatedStr)
+			fmt.Printf("%s | %.2f | %s | %s | %s\n", item.Symbol, item.Score, addedStr, updatedStr, scoring.ScoreCategory(float64(item.Score)))
 		}
 	case 2:
 		return

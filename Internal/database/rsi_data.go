@@ -2,10 +2,13 @@ package datafeed
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
 	database "github.com/fazecat/mongelmaker/Internal/database/sqlc"
+	"github.com/fazecat/mongelmaker/Internal/types"
+	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
 type PricePoint struct {
@@ -116,4 +119,69 @@ func FetchRSIByTimestampRange(symbol string, startTime, endTime time.Time) (map[
 		rsiMap[dateStr] = float64(row.RsiValue)
 	}
 	return rsiMap, nil
+}
+
+// calculateRSI calculates RSI values locally to avoid import cycle
+func calculateRSI(closes []float64, period int) ([]float64, error) {
+	if len(closes) < period+1 {
+		return nil, fmt.Errorf("not enough data")
+	}
+	rsi := make([]float64, len(closes))
+
+	// Calculate gains and losses
+	gains := make([]float64, len(closes))
+	losses := make([]float64, len(closes))
+
+	for i := 1; i < len(closes); i++ {
+		change := closes[i] - closes[i-1]
+		if change > 0 {
+			gains[i] = change
+		} else {
+			losses[i] = -change
+		}
+	}
+
+	for i := period; i < len(closes); i++ {
+		windowGains := gains[i-period+1 : i+1]
+		windowLosses := losses[i-period+1 : i+1]
+
+		// Calculate average window
+		avgGain := utils.Average(windowGains)
+		avgLoss := utils.Average(windowLosses)
+
+		if avgLoss == 0 {
+			rsi[i] = 100
+		} else {
+			rs := avgGain / avgLoss
+			rsi[i] = 100 - (100 / (1 + rs))
+		}
+	}
+
+	return rsi, nil
+}
+
+func CalculateAndStoreRSI(symbol string, bars []types.Bar) error {
+	if len(bars) == 0 {
+		return nil
+	}
+	closingPrices := make([]float64, len(bars))
+	for i, bar := range bars {
+		closingPrices[i] = bar.Close
+	}
+
+	rsiValues, err := calculateRSI(closingPrices, 14)
+	if err != nil {
+		return err
+	}
+	for i, bar := range bars {
+		timestamp, err := time.Parse(time.RFC3339, bar.Timestamp)
+		if err != nil {
+			return err
+		}
+		err = SaveRSI(symbol, timestamp, rsiValues[i])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

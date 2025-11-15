@@ -3,11 +3,16 @@ package strategy
 import (
 	"fmt"
 
-	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
-func CalculateATR(atrBars []datafeed.ATRBar, period int) ([]float64, error) {
+type ATRBar struct {
+	High  float64
+	Low   float64
+	Close float64
+}
+
+func CalculateATR(atrBars []ATRBar, period int) ([]float64, error) {
 	if len(atrBars) < period+1 {
 		return nil, fmt.Errorf("not enough data")
 	}
@@ -34,40 +39,6 @@ func CalculateATR(atrBars []datafeed.ATRBar, period int) ([]float64, error) {
 
 func CalculateTrueRange(high, low, prevClose float64) float64 {
 	return utils.Max(high-low, utils.Abs(high-prevClose), utils.Abs(low-prevClose))
-}
-
-func CalculateAndStoreATR(symbol string, period int, timeframe string, limit int) error {
-	atrBars, err := datafeed.FetchATRPrices(symbol, limit, timeframe)
-	if err != nil {
-		return err
-	}
-
-	atrValues, err := CalculateATR(atrBars, period)
-	if err != nil {
-		return err
-	}
-
-	savedCount := 0
-	for i, atrValue := range atrValues {
-		if atrValue != 0 {
-			err := datafeed.SaveATR(symbol, atrBars[i].Timestamp, atrValue)
-			if err != nil {
-				return err
-			}
-			savedCount++
-		}
-	}
-
-	latestATR := 0.0
-	for i := len(atrValues) - 1; i >= 0; i-- {
-		if atrValues[i] != 0 {
-			latestATR = atrValues[i]
-			break
-		}
-	}
-
-	fmt.Printf("✅ Saved %d ATR values for %s. Latest: %.2f\n", savedCount, symbol, latestATR)
-	return nil
 }
 
 // Will do later

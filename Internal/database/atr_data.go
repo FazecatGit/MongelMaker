@@ -6,6 +6,8 @@ import (
 	"time"
 
 	database "github.com/fazecat/mongelmaker/Internal/database/sqlc"
+	"github.com/fazecat/mongelmaker/Internal/types"
+	"github.com/fazecat/mongelmaker/Internal/utils/scoring"
 )
 
 type ATRPoint struct {
@@ -110,4 +112,24 @@ func FetchATRByTimestampRange(symbol string, startTime, endTime time.Time) (map[
 		atrMap[dateStr] = float64(row.AtrValue)
 	}
 	return atrMap, nil
+}
+func CalculateAndStoreATR(symbol string, bars []types.Bar) error {
+	if len(bars) == 0 {
+		return nil
+	}
+
+	atrValue := scoring.CalculateATRFromBars(bars)
+
+	latestBar := bars[len(bars)-1]
+	latestTime, err := time.Parse(time.RFC3339, latestBar.Timestamp)
+	if err != nil {
+		return err
+	}
+
+	err = SaveATR(symbol, latestTime, atrValue)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
