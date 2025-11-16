@@ -1,11 +1,11 @@
 package strategy
 
 import (
+	"github.com/fazecat/mongelmaker/Internal/types"
 	"github.com/fazecat/mongelmaker/Internal/utils"
-	"github.com/fazecat/mongelmaker/Internal/utils/scoring"
 )
 
-func CalculateInterestScore(input scoring.ScoringInput) float64 {
+func CalculateInterestScore(input types.ScoringInput) float64 {
 	baseScore := 5.0
 
 	priceDropMult := 1.0 + (input.PriceDrop/10)*0.1

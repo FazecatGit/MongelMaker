@@ -41,7 +41,7 @@ func DefaultScreenerCriteria() ScreenerCriteria {
 	}
 }
 
-// ScreenStocks screens a list of symbols based on criteria
+// screens a list of symbols based on criteria
 func ScreenStocks(symbols []string, timeframe string, numBars int, criteria ScreenerCriteria, newsStorage *NewsStorage) ([]StockScore, error) {
 	var results []StockScore
 
@@ -51,8 +51,7 @@ func ScreenStocks(symbols []string, timeframe string, numBars int, criteria Scre
 			log.Printf("Error screening %s: %v", symbol, err)
 			continue
 		}
-		// Include stocks with ANY data or signals (more inclusive)
-		// Skip only if completely empty (no bars, no data at all)
+		// Include stocks with ANY data or signals
 		if score == 0 && len(signals) == 0 && rsi == nil && atr == nil {
 			log.Printf("Skipping %s: no data available", symbol)
 			continue
@@ -65,8 +64,6 @@ func ScreenStocks(symbols []string, timeframe string, numBars int, criteria Scre
 			ATR:     atr,
 		})
 	}
-
-	// Sort by score descending
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].Score > results[j].Score
 	})
@@ -89,7 +86,6 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 	endTime := time.Now()
 
 	if len(bars) > 0 {
-		// Get oldest bar timestamp (at end of slice now since reversed)
 		oldestTime, err := time.Parse(time.RFC3339, bars[len(bars)-1].Timestamp)
 		if err == nil {
 			startTime = oldestTime
@@ -112,10 +108,13 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		atr = findLatestValue(atrMap)
 	}
 
-	// Analyze latest candle (now at bars[0] since reversed)
+	// Analyze latest candle
 	latestBar := bars[0]
-	avgVol20 := calculateAvgVolume(bars, 20)
-	analysis, confidence := utils.PatternAnalyzeCandle(latestBar, atr, avgVol20, int64(latestBar.Volume))
+	volumes := make([]int64, len(bars))
+	for i, bar := range bars {
+		volumes[i] = bar.Volume
+	}
+	avgVol20 := utils.CalculateAvgVolume(volumes, 20)
 
 	score = 0
 	signals = []string{}
@@ -152,18 +151,6 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		}
 	}
 
-	// Pattern scoring (higher priority when indicators missing)
-	if confidence > 0.7 {
-		score += 15 // Increased from 10
-		signals = append(signals, fmt.Sprintf("Strong Pattern: %s (%.0f%%)", analysis, confidence*100))
-	} else if confidence > 0.5 {
-		score += 10 // Increased from 5
-		signals = append(signals, fmt.Sprintf("Pattern: %s (%.0f%%)", analysis, confidence*100))
-	} else if confidence > 0.3 {
-		score += 5
-		signals = append(signals, fmt.Sprintf("Pattern: %s (%.0f%%)", analysis, confidence*100))
-	}
-
 	// Detect whale volume anomalies (institutional activity)
 	whales := DetectWhales(symbol, bars)
 	if len(whales) > 0 {
@@ -176,38 +163,24 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		}
 	}
 
-	// Support and resistance levels
 	support := FindSupport(bars)
 	resistance := FindResistance(bars)
 
 	currentPrice := latestBar.Close
-	if currentPrice < support*1.01 { // Within 1% of support
+	if currentPrice < support*1.01 {
 		score += 15 // Strong buy signal
 		signals = append(signals, fmt.Sprintf("Near Support: $%.2f", support))
 	}
-	if currentPrice > resistance*0.99 { // Within 1% of resistance
+	if currentPrice > resistance*0.99 {
 		score -= 10 // Sell signal
 		signals = append(signals, fmt.Sprintf("Near Resistance: $%.2f", resistance))
 	}
 
-	// Calculate combined signal (ensemble of all signals)
-	combinedSignal := CalculateSignal(rsi, atr, bars, symbol, analysis)
+	combinedSignal := CalculateSignal(rsi, atr, bars, symbol, "")
 
-	// Add combined signal to signals list
 	signals = append(signals, fmt.Sprintf("\n🎯 FINAL: %s", FormatSignal(combinedSignal)))
 
 	return score, signals, rsi, atr, nil
-}
-
-func calculateAvgVolume(bars []datafeed.Bar, period int) float64 {
-	if len(bars) < period {
-		period = len(bars)
-	}
-	sum := 0.0
-	for i := len(bars) - period; i < len(bars); i++ {
-		sum += float64(bars[i].Volume)
-	}
-	return sum / float64(period)
 }
 
 // Helper to find latest value in map by timestamp keys

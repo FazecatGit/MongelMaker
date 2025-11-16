@@ -5,19 +5,9 @@ import (
 	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
-type ScoringInput struct {
-	CurrentPrice float64
-	VWAPPrice    float64
-	ATRValue     float64
-	RSIValue     float64
-	WhaleCount   float64
-	PriceDrop    float64
-	ATRCategory  string
-}
-
-func BuildScoringInput(bars []types.Bar, vwapPrice float64, rsiValue float64, whaleCount int, atrValue float64, atrCategory string) (ScoringInput, error) {
+func BuildScoringInput(bars []types.Bar, vwapPrice float64, rsiValue float64, whaleCount int, atrValue float64, atrCategory string) (types.ScoringInput, error) {
 	if len(bars) < 2 {
-		return ScoringInput{}, nil
+		return types.ScoringInput{}, nil
 	}
 
 	currentBar := bars[len(bars)-1]
@@ -29,7 +19,7 @@ func BuildScoringInput(bars []types.Bar, vwapPrice float64, rsiValue float64, wh
 		priceDrop = ((openPrice - currentPrice) / openPrice) * 100
 	}
 
-	return ScoringInput{
+	return types.ScoringInput{
 		CurrentPrice: currentPrice,
 		VWAPPrice:    vwapPrice,
 		ATRValue:     atrValue,

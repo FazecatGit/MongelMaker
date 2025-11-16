@@ -29,7 +29,6 @@ func CalculateATR(atrBars []ATRBar, period int) ([]float64, error) {
 		trueRanges[i] = trueRange
 	}
 
-	// Calculate ATR
 	for i := period; i < len(atrBars); i++ {
 		atrValues[i] = utils.Average(trueRanges[i-period+1 : i+1])
 	}

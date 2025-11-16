@@ -1,0 +1,32 @@
+package types
+
+type Bar struct {
+	Timestamp string  `json:"t"`
+	Open      float64 `json:"o"`
+	High      float64 `json:"h"`
+	Low       float64 `json:"l"`
+	Close     float64 `json:"c"`
+	Volume    int64   `json:"v"`
+}
+
+type Candidate struct {
+	Symbol         string
+	Score          float64
+	RSI            float64
+	ATR            float64
+	Analysis       string
+	BodyUpperRatio float64
+	BodyLowerRatio float64
+	VWAPPrice      float64
+	WhaleCount     int
+}
+
+type ScoringInput struct {
+	CurrentPrice float64
+	VWAPPrice    float64
+	ATRValue     float64
+	RSIValue     float64
+	WhaleCount   float64
+	PriceDrop    float64
+	ATRCategory  string
+}

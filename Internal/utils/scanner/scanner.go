@@ -8,6 +8,8 @@ import (
 	db "github.com/fazecat/mongelmaker/Internal/database"
 	database "github.com/fazecat/mongelmaker/Internal/database/sqlc"
 	"github.com/fazecat/mongelmaker/Internal/strategy"
+	"github.com/fazecat/mongelmaker/Internal/types"
+	"github.com/fazecat/mongelmaker/Internal/utils/analyzer"
 	"github.com/fazecat/mongelmaker/Internal/utils/config"
 	"github.com/fazecat/mongelmaker/Internal/utils/scoring"
 )
@@ -121,4 +123,33 @@ func CalculateScanInterval(profileName string, cfg *config.Config) time.Duration
 func GetNextScanDue(lastScan time.Time, profileName string, cfg *config.Config) time.Time {
 	interval := CalculateScanInterval(profileName, cfg)
 	return lastScan.Add(interval)
+}
+
+func PerformProfileScan(ctx context.Context, profileName string, minScore float64) ([]types.Candidate, error) {
+	//placeholder - need to implement profile-based stock selection but where???
+	symbols := strategy.GetPopularStocks()
+
+	candidates := []types.Candidate{}
+
+	for _, symbol := range symbols {
+		bars, err := db.GetAlpacaBars(symbol, "1Day", 100, "")
+		if err != nil {
+			continue
+		}
+
+		if len(bars) == 0 {
+			continue
+		}
+
+		candidate, err := analyzer.CalculateCandidateMetrics(ctx, symbol, bars)
+		if err != nil {
+			continue
+		}
+
+		if candidate.Score >= minScore {
+			candidates = append(candidates, *candidate)
+		}
+	}
+
+	return candidates, nil
 }

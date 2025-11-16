@@ -52,6 +52,17 @@ func Min(values ...float64) float64 {
 	return min
 }
 
+func CalculateAvgVolume(volumes []int64, period int) float64 {
+	if len(volumes) < period {
+		period = len(volumes)
+	}
+	sum := 0.0
+	for i := len(volumes) - period; i < len(volumes); i++ {
+		sum += float64(volumes[i])
+	}
+	return sum / float64(period)
+}
+
 func StandardDeviation(values []float64) float64 {
 	if len(values) == 0 {
 		return 0

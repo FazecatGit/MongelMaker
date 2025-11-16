@@ -11,6 +11,7 @@ import (
 	"github.com/fazecat/mongelmaker/Internal/strategy"
 	"github.com/fazecat/mongelmaker/Internal/types"
 	"github.com/fazecat/mongelmaker/Internal/utils"
+	"github.com/fazecat/mongelmaker/Internal/utils/analyzer"
 	"github.com/fazecat/mongelmaker/Internal/utils/scoring"
 )
 
@@ -215,14 +216,13 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 			atrStr = fmt.Sprintf("%6.2f", atrVal)
 		}
 
-		// Calculate Body-to-Wick ratios and analysis
-		candle := utils.Candlestick{
+		candle := analyzer.Candlestick{
 			Open:  bar.Open,
 			Close: bar.Close,
 			High:  bar.High,
 			Low:   bar.Low,
 		}
-		metrics, results := utils.AnalyzeCandlestick(candle)
+		metrics, results := analyzer.AnalyzeCandlestick(candle)
 		bodyToUpperStr := fmt.Sprintf("%9.2f", metrics["BodyToUpper"])
 		bodyToLowerStr := fmt.Sprintf("%9.2f", metrics["BodyToLower"])
 		analysisStr := results["Analysis"]
@@ -625,8 +625,8 @@ func PrepareExportData(bars []datafeed.Bar, symbol string, timezone *time.Locati
 			atrPtr = &atrVal
 		}
 
-		candle := utils.Candlestick{Open: bar.Open, Close: bar.Close, High: bar.High, Low: bar.Low}
-		_, results := utils.AnalyzeCandlestick(candle)
+		candle := analyzer.Candlestick{Open: bar.Open, Close: bar.Close, High: bar.High, Low: bar.Low}
+		_, results := analyzer.AnalyzeCandlestick(candle)
 		analysis := results["Analysis"]
 
 		var signals []string

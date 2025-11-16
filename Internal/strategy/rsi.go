@@ -13,7 +13,6 @@ func CalculateRSI(closes []float64, period int) ([]float64, error) {
 	}
 	rsi := make([]float64, len(closes))
 
-	// Calculate gains and losses
 	gains := make([]float64, len(closes))
 	losses := make([]float64, len(closes))
 
@@ -30,7 +29,6 @@ func CalculateRSI(closes []float64, period int) ([]float64, error) {
 		windowGains := gains[i-period+1 : i+1]
 		windowLosses := losses[i-period+1 : i+1]
 
-		// Calculate average window
 		avgGain := utils.Average(windowGains)
 		avgLoss := utils.Average(windowLosses)
 
