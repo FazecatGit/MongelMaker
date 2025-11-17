@@ -118,7 +118,6 @@ func GetLatestCandlePattern(bars []types.Bar, numCandles int) string {
 	return fmt.Sprintf("Mixed Trend (Latest: %s)", latestPattern)
 }
 
-// GetPatternConfidence returns the confidence (0.0 - 1.0) for the latest candle's pattern
 func GetPatternConfidence(ctx context.Context, symbol string, bars []types.Bar) (float64, error) {
 	if len(bars) == 0 {
 		return 0, fmt.Errorf("no bars provided for %s", symbol)
@@ -139,7 +138,6 @@ func GetPatternConfidence(ctx context.Context, symbol string, bars []types.Bar) 
 		}
 	}
 
-	// Extract volumes from bars
 	volumes := make([]int64, len(bars))
 	for i, bar := range bars {
 		volumes[i] = bar.Volume

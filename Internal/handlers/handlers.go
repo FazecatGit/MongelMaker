@@ -107,7 +107,7 @@ func HandleAnalyzeSingle(ctx context.Context, q *database.Queries) {
 	}
 
 	displayChoice, _ := interactive.ShowDisplayMenu()
-	clearInputBuffer() // Clear any leftover input from menu selection
+	clearInputBuffer()
 
 	switch displayChoice {
 	case "basic":
@@ -339,4 +339,65 @@ func HandleWatchlist(ctx context.Context, q *database.Queries) {
 	default:
 		fmt.Println("❌ Invalid choice")
 	}
+}
+
+func HandleScout(ctx context.Context, cfg *config.Config, q *database.Queries) {
+	profiles := make([]string, 0)
+	for name := range cfg.Profiles {
+		profiles = append(profiles, name)
+	}
+
+	for i, profileName := range profiles {
+		profile := cfg.Profiles[profileName]
+		fmt.Printf("%d. %s (scan interval: %d days)\n", i+1, profileName, profile.ScanIntervalDays)
+	}
+
+	var minScore float64
+	fmt.Print("Enter minimum score threshold (e.g., 0.0 to 100.0): ")
+	_, err := fmt.Scanln(&minScore)
+	if err != nil {
+		fmt.Println("❌ Invalid input for minimum score threshold")
+		return
+	}
+
+	fmt.Print("Select profile (number): ")
+	var choice int
+	_, err = fmt.Scanln(&choice)
+	if err != nil || choice < 1 || choice > len(profiles) {
+		fmt.Println("❌ Invalid selection")
+		return
+	}
+
+	selectedProfile := profiles[choice-1]
+
+	candidates, err := scanner.PerformProfileScan(ctx, selectedProfile, minScore)
+	if err != nil {
+		fmt.Printf("❌ Scout scan failed: %v\n", err)
+		return
+	}
+	if len(candidates) == 0 {
+		fmt.Println("📭 No candidates found above the score threshold")
+		return
+	}
+
+	for i, candidate := range candidates {
+		fmt.Printf("   %d. %s\n", i+1, candidate.Symbol)
+		fmt.Printf("      Score: %.2f | Pattern: %s\n", candidate.Score, candidate.Analysis)
+
+		fmt.Print("      ➕ Add to watchlist? (y/n): ")
+		var addChoice string
+		fmt.Scanln(&addChoice)
+		if strings.ToLower(addChoice) == "y" {
+			reason := fmt.Sprintf("Scouted - Pattern: %s", candidate.Analysis)
+			_, err := watchlist.AddToWatchlist(ctx, q, candidate.Symbol, "stock", candidate.Score, reason)
+			if err != nil {
+				fmt.Printf("      ❌ Failed to add: %v\n", err)
+				continue
+			}
+			fmt.Printf("      ✅ Added %s to watchlist\n", candidate.Symbol)
+		}
+	}
+
+	fmt.Println("\n--- Press Enter to continue ---")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 }

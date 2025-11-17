@@ -78,8 +78,9 @@ func main() {
 		fmt.Println("2. Analyze Single Stock")
 		fmt.Println("3. Run Screener")
 		fmt.Println("4. View Watchlist")
-		fmt.Println("5. Exit")
-		fmt.Print("Enter choice (1-5): ")
+		fmt.Println("5. Scout Symbols")
+		fmt.Println("6. Exit")
+		fmt.Print("Enter choice (1-6): ")
 
 		var choice int
 		_, err := fmt.Scanln(&choice)
@@ -98,6 +99,8 @@ func main() {
 		case 4:
 			handlers.HandleWatchlist(ctx, datafeed.Queries)
 		case 5:
+			handlers.HandleScout(ctx, cfg, datafeed.Queries)
+		case 6:
 			fmt.Println("Goodbye!")
 			return
 		default:
