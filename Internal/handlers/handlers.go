@@ -3,6 +3,7 @@ package handlers
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"strings"
@@ -370,32 +371,106 @@ func HandleScout(ctx context.Context, cfg *config.Config, q *database.Queries) {
 
 	selectedProfile := profiles[choice-1]
 
-	candidates, err := scanner.PerformProfileScan(ctx, selectedProfile, minScore)
-	if err != nil {
-		fmt.Printf("❌ Scout scan failed: %v\n", err)
-		return
-	}
-	if len(candidates) == 0 {
-		fmt.Println("📭 No candidates found above the score threshold")
-		return
+	var batchSize int
+	fmt.Print("Review every N symbols (50 or 100): ")
+	fmt.Scanln(&batchSize)
+	if batchSize != 50 && batchSize != 100 {
+		batchSize = 50 // default
 	}
 
-	for i, candidate := range candidates {
-		fmt.Printf("   %d. %s\n", i+1, candidate.Symbol)
-		fmt.Printf("      Score: %.2f | Pattern: %s\n", candidate.Score, candidate.Analysis)
+	offset := 0
+	batchNum := 1
 
-		fmt.Print("      ➕ Add to watchlist? (y/n): ")
-		var addChoice string
-		fmt.Scanln(&addChoice)
-		if strings.ToLower(addChoice) == "y" {
-			reason := fmt.Sprintf("Scouted - Pattern: %s", candidate.Analysis)
-			_, err := watchlist.AddToWatchlist(ctx, q, candidate.Symbol, "stock", candidate.Score, reason)
-			if err != nil {
-				fmt.Printf("      ❌ Failed to add: %v\n", err)
-				continue
-			}
-			fmt.Printf("      ✅ Added %s to watchlist\n", candidate.Symbol)
+	for {
+		fmt.Printf("\n🔄 Scanning batch %d (evaluating %d symbols)...\n", batchNum, batchSize)
+		candidates, totalSymbols, err := scanner.PerformProfileScan(ctx, selectedProfile, minScore, offset, batchSize)
+		if err != nil {
+			fmt.Printf("❌ Scout scan failed: %v\n", err)
+			return
 		}
+
+		if offset >= totalSymbols {
+			fmt.Println("✅ Scout scan complete - all symbols evaluated")
+			break
+		}
+
+		if len(candidates) == 0 {
+			fmt.Printf("📭 No candidates found in this batch (evaluated %d-%d of %d symbols)\n", offset+1, offset+batchSize, totalSymbols)
+		} else {
+			fmt.Printf("\n📊 Batch %d candidates (%d of %d total symbols evaluated):\n", batchNum, offset+batchSize, totalSymbols)
+
+			for _, candidate := range candidates {
+				fmt.Printf("\n   %s\n", candidate.Symbol)
+				fmt.Printf("      Score: %.2f | Pattern: %s\n", candidate.Score, candidate.Analysis)
+
+				for {
+					fmt.Print("      (e)xpand / (y)es / (n)o / (i)gnore: ")
+					var choice string
+					fmt.Scanln(&choice)
+					choice = strings.ToLower(choice)
+
+					if choice == "e" {
+						tz, _ := interactive.ShowTimezoneMenu()
+						clearInputBuffer()
+						interactive.DisplayAnalyticsData(candidate.Bars, candidate.Symbol, "1Day", tz, q)
+						continue
+					}
+
+					if choice == "y" {
+						fmt.Printf("      Adding %s to watchlist...\n", candidate.Symbol)
+						reason := fmt.Sprintf("Scouted - Pattern: %s", candidate.Analysis)
+						_, err := watchlist.AddToWatchlist(ctx, q, candidate.Symbol, "stock", candidate.Score, reason)
+						if err != nil {
+							fmt.Printf("      ❌ Failed to add: %v\n", err)
+						} else {
+							fmt.Printf("      ✅ Added %s to watchlist (Score: %.2f)\n", candidate.Symbol, candidate.Score)
+						}
+						break
+					}
+
+					if choice == "i" {
+						err := q.AddToScoutSkipList(ctx, database.AddToScoutSkipListParams{
+							Symbol:      candidate.Symbol,
+							ProfileName: selectedProfile,
+							AssetType:   "stock",
+							Reason: sql.NullString{
+								String: "User ignored during scout",
+								Valid:  true,
+							},
+						})
+						if err != nil {
+							fmt.Printf("      ❌ Failed to ignore: %v\n", err)
+						} else {
+							fmt.Printf("      ⏭️ Skipping %s for 2 days\n", candidate.Symbol)
+						}
+						break
+					}
+
+					if choice == "n" {
+						fmt.Printf("      ⏭️ Skipped %s\n", candidate.Symbol)
+						break
+					}
+
+					fmt.Println("      ❌ Invalid choice. Try again.")
+				}
+			}
+		}
+
+		nextOffset := offset + batchSize
+		if nextOffset < totalSymbols {
+			clearInputBuffer()
+			fmt.Print("\n⏸️  Continue scanning next batch? (y to continue, or press Enter to stop): ")
+			var continueChoice string
+			fmt.Scanln(&continueChoice)
+			continueChoice = strings.ToLower(continueChoice)
+			if continueChoice != "y" {
+				fmt.Println("⏹️ Scout review stopped")
+				break
+			}
+		}
+
+		offset = nextOffset
+		batchNum++
 	}
 
 	fmt.Println("\n--- Press Enter to continue ---")

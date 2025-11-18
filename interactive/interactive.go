@@ -202,7 +202,6 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 			displayTimestamp = bar.Timestamp
 		}
 
-		// Get RSI and ATR for current timestamp
 		rsiVal, hasRSI := rsiMap[timestampStr]
 		atrVal, hasATR := atrMap[timestampStr]
 
@@ -227,7 +226,6 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 		bodyToLowerStr := fmt.Sprintf("%9.2f", metrics["BodyToLower"])
 		analysisStr := results["Analysis"]
 
-		// Save latest bar's analysis and indicators
 		if i == 0 {
 			latestAnalysis = analysisStr
 			if hasRSI {
@@ -240,10 +238,8 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 			}
 		}
 
-		// Generate combined signal string
 		signalStr := ""
 
-		// RSI Signal
 		if hasRSI {
 			rsiSignal := strategy.DetermineRSISignal(rsiVal)
 			switch rsiSignal {
@@ -255,7 +251,7 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 				signalStr += "➡️  Neutral"
 			}
 		} else {
-			// Fallback: Generate signal from candle analysis
+
 			analysis := results["Analysis"]
 			if analysis == "Strong Bullish" || analysis == "Bullish" {
 				signalStr += "📈 Bullish Signal"
@@ -271,7 +267,7 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 		}
 
 		if hasATR {
-			// Calculate ATR threshold dynamically
+
 			atrThreshold := bar.Close * 0.01
 			atrSignal := strategy.DetermineATRSignal(atrVal, atrThreshold)
 
@@ -286,7 +282,6 @@ func DisplayAnalyticsData(bars []datafeed.Bar, symbol string, timeframe string, 
 				signalStr += "❄️  Low Vol"
 			}
 		} else {
-			// Fallback: Calculate volatility from price range (works for all asset classes)
 			priceRange := bar.High - bar.Low
 			rangePct := (priceRange / bar.Close) * 100
 

@@ -57,6 +57,7 @@ func CalculateCandidateMetrics(ctx context.Context, symbol string, bars []types.
 		RSI:      rsiValues[len(rsiValues)-1],
 		ATR:      atrValue,
 		Analysis: latestPattern,
+		Bars:     bars,
 	}
 
 	return candidate, nil

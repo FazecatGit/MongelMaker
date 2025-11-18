@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 	"github.com/fazecat/mongelmaker/Internal/types"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 )
@@ -52,7 +53,6 @@ func GetAlpacaBars(symbol string, timeframe string, limit int, startDate string)
 		}
 
 		barDur := timeframeToDur(timeframe)
-		// add a small safety buffer of 2 bars
 		totalDur := barDur * time.Duration(limit+2)
 		start := now.Add(-totalDur)
 		startDate = start.Format(time.RFC3339)
@@ -65,7 +65,6 @@ func GetAlpacaBars(symbol string, timeframe string, limit int, startDate string)
 
 	fmt.Printf("🔗 API Request: %s\n", apiURL)
 
-	//retry logic
 	var bars []Bar
 	retryConfig := utils.DefaultRetryConfig()
 
@@ -83,10 +82,9 @@ func GetAlpacaBars(symbol string, timeframe string, limit int, startDate string)
 
 		fmt.Printf("📡 API Response Status: %s\n", resp.Status)
 
-		// Checking API errors
 		if resp.StatusCode == 403 {
 			fmt.Printf("⚠️  403 Forbidden - Your account may not have access to %s data\n", timeframe)
-			bars = []Bar{} // Return empty slice instead of error
+			bars = []Bar{}
 			return nil
 		}
 
@@ -202,3 +200,33 @@ func GetLastTrade(symbol string) (*Bar, error) {
 
 	return trade, err
 }
+
+var alpacaClient *alpaca.Client
+
+// InitAlpacaClient initializes the global Alpaca client from environment variables
+func InitAlpacaClient() error {
+	apiKey := os.Getenv("ALPACA_API_KEY")
+	secretKey := os.Getenv("ALPACA_API_SECRET")
+
+	if apiKey == "" || secretKey == "" {
+		return fmt.Errorf("ALPACA_API_KEY or ALPACA_API_SECRET not set")
+	}
+
+	alpacaClient = alpaca.NewClient(alpaca.ClientOpts{
+		APIKey:    apiKey,
+		APISecret: secretKey,
+		BaseURL:   "https://paper-api.alpaca.markets",
+	})
+
+	return nil
+}
+
+// GetAlpacaClient returns the initialized Alpaca client
+func GetAlpacaClient() *alpaca.Client {
+	return alpacaClient
+}
+
+
+func 
+//1
+//2

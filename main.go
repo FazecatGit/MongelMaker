@@ -58,20 +58,22 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	// Check market status
 	cfg, _ := config.LoadConfig()
 	status, isOpen := utils.CheckMarketStatus(time.Now(), cfg)
 	fmt.Printf("📊 Market Status: %s (Open: %v)\n\n", status, isOpen)
 
-	// Initialize Finnhub client for news fetching
-	finnhubClient := newsscraping.NewFinnhubClient()
-	_ = finnhubClient // TODO: Use if needed
+	// for the scouting feature
+	err = datafeed.InitAlpacaClient()
+	if err != nil {
+		log.Printf("Warning: Alpaca client initialization failed: %v\n", err)
+	}
 
-	// Start background scanner goroutine
+	finnhubClient := newsscraping.NewFinnhubClient()
+	_ = finnhubClient
+
 	ctx := context.Background()
 	go startBackgroundScanner(ctx, cfg)
 
-	// Main event loop
 	for {
 		fmt.Println("\n--- MongelMaker Menu ---")
 		fmt.Println("1. Scan Watchlist")
@@ -127,6 +129,8 @@ func startBackgroundScanner(ctx context.Context, cfg *config.Config) {
 			} else {
 				log.Println("Background scan completed successfully")
 			}
+			scanner.PerformScan(ctx, "default", cfg, datafeed.Queries)
+
 		}
 	}
 }

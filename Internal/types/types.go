@@ -19,6 +19,7 @@ type Candidate struct {
 	BodyLowerRatio float64
 	VWAPPrice      float64
 	WhaleCount     int
+	Bars           []Bar
 }
 
 type ScoringInput struct {

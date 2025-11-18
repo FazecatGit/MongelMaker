@@ -13,6 +13,28 @@ import (
 	"github.com/lib/pq"
 )
 
+const addToScoutSkipList = `-- name: AddToScoutSkipList :exec
+INSERT INTO scout_skip_list (symbol, profile_name, asset_type, reason, recheck_after)
+VALUES ($1, $2, $3, $4, NOW() + INTERVAL '2 days')
+`
+
+type AddToScoutSkipListParams struct {
+	Symbol      string         `json:"symbol"`
+	ProfileName string         `json:"profile_name"`
+	AssetType   string         `json:"asset_type"`
+	Reason      sql.NullString `json:"reason"`
+}
+
+func (q *Queries) AddToScoutSkipList(ctx context.Context, arg AddToScoutSkipListParams) error {
+	_, err := q.db.ExecContext(ctx, addToScoutSkipList,
+		arg.Symbol,
+		arg.ProfileName,
+		arg.AssetType,
+		arg.Reason,
+	)
+	return err
+}
+
 const addToWatchlist = `-- name: AddToWatchlist :one
 INSERT INTO watchlist (symbol, asset_type, score, reason, added_date, last_updated, status)
 VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'active')
@@ -809,6 +831,26 @@ func (q *Queries) GetWhaleEventsBySymbol(ctx context.Context, arg GetWhaleEvents
 		return nil, err
 	}
 	return items, nil
+}
+
+const isSymbolSkipped = `-- name: IsSymbolSkipped :one
+SELECT COUNT(*) > 0 as is_skipped
+FROM scout_skip_list
+WHERE symbol = $1 
+  AND profile_name = $2 
+  AND recheck_after > NOW()
+`
+
+type IsSymbolSkippedParams struct {
+	Symbol      string `json:"symbol"`
+	ProfileName string `json:"profile_name"`
+}
+
+func (q *Queries) IsSymbolSkipped(ctx context.Context, arg IsSymbolSkippedParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isSymbolSkipped, arg.Symbol, arg.ProfileName)
+	var is_skipped bool
+	err := row.Scan(&is_skipped)
+	return is_skipped, err
 }
 
 const removeFromSkipBacklog = `-- name: RemoveFromSkipBacklog :exec

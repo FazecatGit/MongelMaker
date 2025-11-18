@@ -7,17 +7,17 @@ import (
 	"sort"
 	"time"
 
-	. "github.com/fazecat/mongelmaker/Internal/news_scraping"
-
+	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 	datafeed "github.com/fazecat/mongelmaker/Internal/database"
+	. "github.com/fazecat/mongelmaker/Internal/news_scraping"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 )
 
 type ScreenerCriteria struct {
-	MinOversoldRSI float64 // RSI threshold for oversold condition (e.g., 30)
-	MaxRSI         float64 // Maximum RSI for overbought
-	MinATR         float64 // Minimum ATR for volatility
-	MinVolumeRatio float64 // Minimum volume ratio vs average
+	MinOversoldRSI float64
+	MaxRSI         float64
+	MinATR         float64
+	MinVolumeRatio float64
 }
 
 type StockScore struct {
@@ -34,10 +34,10 @@ type StockScore struct {
 
 func DefaultScreenerCriteria() ScreenerCriteria {
 	return ScreenerCriteria{
-		MinOversoldRSI: 35,  // RSI < 35 indicates oversold (more lenient)
-		MaxRSI:         75,  // Avoid overbought (more lenient)
+		MinOversoldRSI: 35,  // RSI < 35 indicates oversold
+		MaxRSI:         75,  // Avoid overbought
 		MinATR:         0.1, // Very low volatility threshold
-		MinVolumeRatio: 1.0, // Any volume above average (was 1.2)
+		MinVolumeRatio: 1.0, // Any volume above average
 	}
 }
 
@@ -51,7 +51,6 @@ func ScreenStocks(symbols []string, timeframe string, numBars int, criteria Scre
 			log.Printf("Error screening %s: %v", symbol, err)
 			continue
 		}
-		// Include stocks with ANY data or signals
 		if score == 0 && len(signals) == 0 && rsi == nil && atr == nil {
 			log.Printf("Skipping %s: no data available", symbol)
 			continue
@@ -92,7 +91,6 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		}
 	}
 
-	// Try to fetch RSI, but continue if it fails
 	rsiMap, rsiErr := datafeed.FetchRSIByTimestampRange(symbol, startTime, endTime)
 	if rsiErr != nil {
 		log.Printf("RSI fetch failed for %s: %v (continuing with other signals)", symbol, rsiErr)
@@ -100,7 +98,6 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		rsi = findLatestValue(rsiMap)
 	}
 
-	// Try to fetch ATR, but continue if it fails
 	atrMap, atrErr := datafeed.FetchATRByTimestampRange(symbol, startTime, endTime)
 	if atrErr != nil {
 		log.Printf("ATR fetch failed for %s: %v (continuing with other signals)", symbol, atrErr)
@@ -151,7 +148,6 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		}
 	}
 
-	// Detect whale volume anomalies (institutional activity)
 	whales := DetectWhales(symbol, bars)
 	if len(whales) > 0 {
 		for _, whale := range whales {
@@ -183,6 +179,40 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 	return score, signals, rsi, atr, nil
 }
 
+func GetTradableAssets() ([]string, error) {
+	client := datafeed.GetAlpacaClient()
+	if client == nil {
+		return nil, fmt.Errorf("alpaca client not initialized - call InitAlpacaClient() first")
+	}
+
+	assets, err := client.GetAssets(alpaca.GetAssetsRequest{
+		Status: "active",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch assets from Alpaca: %v", err)
+	}
+
+	symbols := make([]string, 0, len(assets))
+	for _, asset := range assets {
+		// Only include stocks, exclude options/crypto for now
+		if asset.Class == "us_equity" && asset.Tradable {
+			symbols = append(symbols, asset.Symbol)
+		}
+	}
+
+	log.Printf("Fetched %d tradeable assets from Alpaca", len(symbols))
+	return symbols, nil
+}
+func GetPopularStocks() []string {
+	return []string{
+		"AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX", "BABA", "ORCL",
+		"JPM", "BAC", "WFC", "C", "GS", "MS", "BLK", "AXP", "USB", "PNC",
+		"JNJ", "PFE", "MRK", "ABT", "TMO", "DHR", "BMY", "LLY", "AMGN", "GILD",
+		"XOM", "CVX", "COP", "EOG", "SLB", "HAL", "BKR", "OXY", "MPC", "PSX",
+		"KO", "PEP", "MDLZ", "MO", "PM", "CL", "KMB", "GIS", "SYY", "HSY",
+	}
+}
+
 // Helper to find latest value in map by timestamp keys
 func findLatestValue(m map[string]float64) *float64 {
 	if len(m) == 0 {
@@ -197,13 +227,4 @@ func findLatestValue(m map[string]float64) *float64 {
 		}
 	}
 	return &latestVal
-}
-func GetPopularStocks() []string {
-	return []string{
-		"AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "NFLX", "BABA", "ORCL",
-		"JPM", "BAC", "WFC", "C", "GS", "MS", "BLK", "AXP", "USB", "PNC",
-		"JNJ", "PFE", "MRK", "ABT", "TMO", "DHR", "BMY", "LLY", "AMGN", "GILD",
-		"XOM", "CVX", "COP", "EOG", "SLB", "HAL", "BKR", "OXY", "MPC", "PSX",
-		"KO", "PEP", "MDLZ", "MO", "PM", "CL", "KMB", "GIS", "SYY", "HSY",
-	}
 }

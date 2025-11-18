@@ -189,3 +189,14 @@ ON CONFLICT (profile_name) DO UPDATE SET
 SELECT id, profile_name, last_scan_timestamp, next_scan_due, symbols_scanned
 FROM scan_log
 ORDER BY profile_name;
+
+-- name: AddToScoutSkipList :exec
+INSERT INTO scout_skip_list (symbol, profile_name, asset_type, reason, recheck_after)
+VALUES ($1, $2, $3, $4, NOW() + INTERVAL '2 days');
+
+-- name: IsSymbolSkipped :one
+SELECT COUNT(*) > 0 as is_skipped
+FROM scout_skip_list
+WHERE symbol = $1 
+  AND profile_name = $2 
+  AND recheck_after > NOW();

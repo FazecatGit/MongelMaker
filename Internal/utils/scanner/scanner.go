@@ -3,6 +3,7 @@ package scanner
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	db "github.com/fazecat/mongelmaker/Internal/database"
@@ -80,7 +81,6 @@ func PerformScan(ctx context.Context, profileName string, cfg *config.Config, q 
 		whaleEvents := strategy.DetectWhales("", bars)
 		whaleCount := len(whaleEvents)
 
-		// Build scoring input with calculated indicators
 		scoringInput, err := scoring.BuildScoringInput(bars, vwapPrice, rsiValue, whaleCount, atrValue, atrCategory)
 		if err != nil {
 			continue
@@ -125,13 +125,28 @@ func GetNextScanDue(lastScan time.Time, profileName string, cfg *config.Config) 
 	return lastScan.Add(interval)
 }
 
-func PerformProfileScan(ctx context.Context, profileName string, minScore float64) ([]types.Candidate, error) {
-	//placeholder - need to implement profile-based stock selection but where???
-	symbols := strategy.GetPopularStocks()
+func PerformProfileScan(ctx context.Context, profileName string, minScore float64, offset int, batchSize int) ([]types.Candidate, int, error) {
+	symbols, err := strategy.GetTradableAssets()
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to fetch tradeable assets: %v", err)
+	}
+
+	totalSymbols := len(symbols)
+
+	end := offset + batchSize
+	if end > totalSymbols {
+		end = totalSymbols
+	}
+
+	if offset >= totalSymbols {
+		return []types.Candidate{}, totalSymbols, nil
+	}
 
 	candidates := []types.Candidate{}
 
-	for _, symbol := range symbols {
+	for i := offset; i < end; i++ {
+		symbol := symbols[i]
+
 		bars, err := db.GetAlpacaBars(symbol, "1Day", 100, "")
 		if err != nil {
 			continue
@@ -151,5 +166,5 @@ func PerformProfileScan(ctx context.Context, profileName string, minScore float6
 		}
 	}
 
-	return candidates, nil
+	return candidates, totalSymbols, nil
 }

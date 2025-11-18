@@ -8,7 +8,6 @@ type PriceLevel struct {
 	Strength   float64
 }
 
-// finds the lowest support level
 func FindSupport(bars []types.Bar) float64 {
 	if len(bars) < 3 {
 		return 0
@@ -22,7 +21,6 @@ func FindSupport(bars []types.Bar) float64 {
 	return lowestLow
 }
 
-// finds the highest resistance level
 func FindResistance(bars []types.Bar) float64 {
 	if len(bars) < 3 {
 		return 0
@@ -36,7 +34,6 @@ func FindResistance(bars []types.Bar) float64 {
 	return highestHigh
 }
 
-// finds multiple support levels (local minima/valleys)
 func GetSupportLevels(bars []types.Bar) []PriceLevel {
 	levels := []PriceLevel{}
 
@@ -51,7 +48,6 @@ func GetSupportLevels(bars []types.Bar) []PriceLevel {
 	return levels
 }
 
-// finds multiple resistance levels (local maxima/peaks)
 func GetResistanceLevels(bars []types.Bar) []PriceLevel {
 	levels := []PriceLevel{}
 
@@ -66,19 +62,16 @@ func GetResistanceLevels(bars []types.Bar) []PriceLevel {
 	return levels
 }
 
-// checks if price is near support
 func IsAtSupport(currentPrice float64, support float64) bool {
 	tolerance := support * 0.01
 	return currentPrice >= support-tolerance && currentPrice <= support+tolerance
 }
 
-// checks if price is near resistance
 func IsAtResistance(currentPrice float64, resistance float64) bool {
 	tolerance := resistance * 0.01
 	return currentPrice >= resistance-tolerance && currentPrice <= resistance+tolerance
 }
 
-// calculates % distance to support
 func DistanceToSupport(currentPrice float64, support float64) float64 {
 	if support == 0 {
 		return 0
@@ -86,7 +79,6 @@ func DistanceToSupport(currentPrice float64, support float64) float64 {
 	return ((currentPrice - support) / support) * 100
 }
 
-// calculates % distance to resistance
 func DistanceToResistance(currentPrice float64, resistance float64) float64 {
 	if resistance == 0 {
 		return 0
@@ -94,7 +86,6 @@ func DistanceToResistance(currentPrice float64, resistance float64) float64 {
 	return ((resistance - currentPrice) / resistance) * 100
 }
 
-//  calculates classic pivot point
 func FindPivotPoint(bars []types.Bar) float64 {
 	if len(bars) == 0 {
 		return 0
@@ -104,7 +95,6 @@ func FindPivotPoint(bars []types.Bar) float64 {
 	return (latestBar.High + latestBar.Low + latestBar.Close) / 3
 }
 
-// checks if price breaks above resistance with buffer
 func IsBreakoutAboveResistance(currentPrice float64, resistance float64) bool {
 	if resistance == 0 {
 		return false
@@ -112,7 +102,6 @@ func IsBreakoutAboveResistance(currentPrice float64, resistance float64) bool {
 	return currentPrice > resistance*1.005 // 0.5% above resistance = breakout
 }
 
-// checks if price breaks below support with buffer
 func IsBreakoutBelowSupport(currentPrice float64, support float64) bool {
 	if support == 0 {
 		return false

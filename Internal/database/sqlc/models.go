@@ -126,6 +126,16 @@ type ScoutList struct {
 	Notes        sql.NullString `json:"notes"`
 }
 
+type ScoutSkipList struct {
+	ID           int32          `json:"id"`
+	Symbol       string         `json:"symbol"`
+	ProfileName  string         `json:"profile_name"`
+	AssetType    string         `json:"asset_type"`
+	Reason       sql.NullString `json:"reason"`
+	Timestamp    sql.NullTime   `json:"timestamp"`
+	RecheckAfter time.Time      `json:"recheck_after"`
+}
+
 type Signal struct {
 	ID           int32          `json:"id"`
 	Symbol       string         `json:"symbol"`
