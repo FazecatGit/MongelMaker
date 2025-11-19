@@ -57,7 +57,6 @@ func UpdateWatchlistScoreWithHistory(ctx context.Context, q *database.Queries, s
 	return nil
 }
 
-// GetWatchlist retrieves all active watchlist items
 func GetWatchlist(ctx context.Context, q *database.Queries) ([]database.GetWatchlistRow, error) {
 	getwatchlist, err := q.GetWatchlist(ctx)
 	if err != nil {
@@ -66,7 +65,6 @@ func GetWatchlist(ctx context.Context, q *database.Queries) ([]database.GetWatch
 	return getwatchlist, nil
 }
 
-// SkipSymbol adds a symbol to the skip backlog
 func SkipSymbol(ctx context.Context, q *database.Queries, symbol, assetType, reason string) error {
 	skipSymbol := database.SkipSymbolParams{
 		Symbol:    symbol,
@@ -80,7 +78,6 @@ func SkipSymbol(ctx context.Context, q *database.Queries, symbol, assetType, rea
 	return nil
 }
 
-// GetRecheckableSymbols retrieves symbols ready to be reconsidered
 func GetRecheckableSymbols(ctx context.Context, q *database.Queries) ([]database.GetRecheckableSymbolsRow, error) {
 	recheckableSymbols, err := q.GetRecheckableSymbols(ctx)
 	if err != nil {

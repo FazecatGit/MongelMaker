@@ -8,7 +8,6 @@ import (
 	sqlc "github.com/fazecat/mongelmaker/Internal/database/sqlc"
 )
 
-// WhaleEventData represents a whale event (generic, no strategy dependency)
 type WhaleEventData struct {
 	Symbol      string
 	Timestamp   string

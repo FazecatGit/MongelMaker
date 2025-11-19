@@ -203,7 +203,6 @@ func GetLastTrade(symbol string) (*Bar, error) {
 
 var alpacaClient *alpaca.Client
 
-// InitAlpacaClient initializes the global Alpaca client from environment variables
 func InitAlpacaClient() error {
 	apiKey := os.Getenv("ALPACA_API_KEY")
 	secretKey := os.Getenv("ALPACA_API_SECRET")
@@ -221,12 +220,6 @@ func InitAlpacaClient() error {
 	return nil
 }
 
-// GetAlpacaClient returns the initialized Alpaca client
 func GetAlpacaClient() *alpaca.Client {
 	return alpacaClient
 }
-
-
-func 
-//1
-//2
