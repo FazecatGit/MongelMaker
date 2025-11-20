@@ -32,10 +32,46 @@ type Config struct {
 		RecheckSkipAfterDays int `yaml:"recheck_skip_after_days"`
 	} `yaml:"archive"`
 
-	Profiles map[string]struct {
-		Threshold        float64 `yaml:"threshold"`
-		ScanIntervalDays int     `yaml:"scan_interval_days"`
-	} `yaml:"profiles"`
+	Profiles map[string]ProfileConfig `yaml:"profiles"`
+
+	Features struct {
+		CryptoSupport      bool `yaml:"crypto_support"`
+		EnableShortSignals bool `yaml:"enable_short_signals"`
+	} `yaml:"features"`
+}
+
+type ProfileConfig struct {
+	Threshold        float64         `yaml:"threshold"`
+	ScanIntervalDays int             `yaml:"scan_interval_days"`
+	Indicators       IndicatorConfig `yaml:"indicators"`
+	SignalWeights    SignalWeights   `yaml:"signal_weights"`
+}
+
+type IndicatorConfig struct {
+	RSI    RSIConfig    `yaml:"rsi"`
+	ATR    ATRConfig    `yaml:"atr"`
+	Volume VolumeConfig `yaml:"volume"`
+}
+
+type RSIConfig struct {
+	MinOversold   float64 `yaml:"min_oversold"`
+	MaxOverbought float64 `yaml:"max_overbought"`
+}
+
+type ATRConfig struct {
+	MinVolatility float64 `yaml:"min_volatility"`
+}
+
+type VolumeConfig struct {
+	MinRatio float64 `yaml:"min_ratio"`
+}
+
+type SignalWeights struct {
+	RSIWeight           float64 `yaml:"rsi_weight"`
+	ATRWeight           float64 `yaml:"atr_weight"`
+	VolumeWeight        float64 `yaml:"volume_weight"`
+	NewsSentimentWeight float64 `yaml:"news_sentiment_weight"`
+	WhaleActivityWeight float64 `yaml:"whale_activity_weight"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -50,4 +86,27 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+// GetScreenerCriteria returns ScreenerCriteria for a given profile name
+// This bridges the config system with the screener package
+func (c *Config) GetScreenerCriteria(profileName string) map[string]interface{} {
+	if profile, exists := c.Profiles[profileName]; exists {
+		return map[string]interface{}{
+			"MinOversoldRSI": profile.Indicators.RSI.MinOversold,
+			"MaxRSI":         profile.Indicators.RSI.MaxOverbought,
+			"MinATR":         profile.Indicators.ATR.MinVolatility,
+			"MinVolumeRatio": profile.Indicators.Volume.MinRatio,
+			"SignalWeights":  profile.SignalWeights,
+		}
+	}
+	return nil
+}
+
+// GetProfile returns the ProfileConfig for a given profile name
+func (c *Config) GetProfile(profileName string) *ProfileConfig {
+	if profile, exists := c.Profiles[profileName]; exists {
+		return &profile
+	}
+	return nil
 }

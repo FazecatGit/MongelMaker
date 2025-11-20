@@ -375,16 +375,13 @@ func displayWhaleEventsInline(symbol string, queries *sqlc.Queries) {
 			emoji = "🔴"
 		}
 
-		// Format timestamp
 		tsStr := "---"
 		if !whale.Timestamp.IsZero() {
 			tsStr = whale.Timestamp.Format("2006-01-02 15:04:05")
 		}
 
-		// Volume in millions
 		volM := float64(whale.Volume) / 1_000_000
 
-		// Conviction level with visual indicator
 		convictionStr := whale.Conviction
 		if whale.Conviction == "HIGH" {
 			convictionStr = "🚨 HIGH"
@@ -504,8 +501,7 @@ func ShowDisplayMenu() (string, error) {
 	fmt.Println("3. Analytics")
 	fmt.Println("4. All Data")
 	fmt.Println("5. Export Data")
-	fmt.Println("6. Stock Screener")
-	fmt.Println("7. vWAP Analysis")
+	fmt.Println("6. vWAP Analysis")
 
 	fmt.Print("Enter choice: ")
 	var choice int
@@ -527,8 +523,6 @@ func ShowDisplayMenu() (string, error) {
 	case 5:
 		return "export", nil
 	case 6:
-		return "screener", nil
-	case 7:
 		return "vwap", nil
 	default:
 		fmt.Println("Invalid choice.")
@@ -676,7 +670,6 @@ func PrepareExportData(bars []datafeed.Bar, symbol string, timezone *time.Locati
 	return records
 }
 
-// DisplayVWAPAnalysis shows comprehensive vWAP analysis with support/resistance and bounce detection
 func DisplayVWAPAnalysis(bars []datafeed.Bar, symbol string, timeframe string) {
 	if len(bars) == 0 {
 		fmt.Printf("⚠️  No data available for %s\n", symbol)
@@ -688,7 +681,6 @@ func DisplayVWAPAnalysis(bars []datafeed.Bar, symbol string, timeframe string) {
 		return
 	}
 
-	// Convert Bar to types.Bar for vWAP calculation
 	typesBars := make([]types.Bar, len(bars))
 	for i := range bars {
 		typesBars[i] = types.Bar(bars[i])

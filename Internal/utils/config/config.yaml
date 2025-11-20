@@ -25,12 +25,58 @@ archive:
 profiles:
   aggressive:
     threshold: 3.5
-    scan_interval_days: 1      # Daily scan runs every 1 day
+    scan_interval_days: 1
+    indicators:
+      rsi:
+        min_oversold: 30        
+        max_overbought: 80      
+      atr:
+        min_volatility: 0.05   
+      volume:
+        min_ratio: 0.8          
+    signal_weights:
+      rsi_weight: 0.30
+      atr_weight: 0.15
+      volume_weight: 0.15
+      news_sentiment_weight: 0.20
+      whale_activity_weight: 0.20
   
   balanced:
     threshold: 4.0
-    scan_interval_days: 3      # Daily scan runs every 3 day
+    scan_interval_days: 3
+    indicators:
+      rsi:
+        min_oversold: 35        
+        max_overbought: 75      
+      atr:
+        min_volatility: 0.10   
+      volume:
+        min_ratio: 1.0         
+    signal_weights:
+      rsi_weight: 0.25
+      atr_weight: 0.20
+      volume_weight: 0.20
+      news_sentiment_weight: 0.20
+      whale_activity_weight: 0.15
   
   conservative:
     threshold: 4.5
-    scan_interval_days: 7 
+    scan_interval_days: 7
+    indicators:
+      rsi:
+        min_oversold: 40        
+        max_overbought: 70      
+      atr:
+        min_volatility: 0.15    
+      volume:
+        min_ratio: 1.5          
+    signal_weights:
+      rsi_weight: 0.20
+      atr_weight: 0.25
+      volume_weight: 0.25
+      news_sentiment_weight: 0.15
+      whale_activity_weight: 0.15
+
+features:
+  crypto_support: false         
+  enable_short_signals: false 
