@@ -88,8 +88,6 @@ func LoadConfig() (*Config, error) {
 	return &cfg, nil
 }
 
-// GetScreenerCriteria returns ScreenerCriteria for a given profile name
-// This bridges the config system with the screener package
 func (c *Config) GetScreenerCriteria(profileName string) map[string]interface{} {
 	if profile, exists := c.Profiles[profileName]; exists {
 		return map[string]interface{}{
@@ -103,7 +101,6 @@ func (c *Config) GetScreenerCriteria(profileName string) map[string]interface{} 
 	return nil
 }
 
-// GetProfile returns the ProfileConfig for a given profile name
 func (c *Config) GetProfile(profileName string) *ProfileConfig {
 	if profile, exists := c.Profiles[profileName]; exists {
 		return &profile

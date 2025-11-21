@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
-	datafeed "github.com/fazecat/mongelmaker/Internal/database"
+
+	"github.com/fazecat/mongelmaker/Internal/datafeed"
 	. "github.com/fazecat/mongelmaker/Internal/news_scraping"
 	"github.com/fazecat/mongelmaker/Internal/utils"
+	"github.com/fazecat/mongelmaker/Internal/utils/config"
 )
 
 type ScreenerCriteria struct {
@@ -227,4 +229,26 @@ func findLatestValue(m map[string]float64) *float64 {
 		}
 	}
 	return &latestVal
+}
+
+func GetScreenerCriteriaFromProfile(cfg *config.Config, profilename string) (ScreenerCriteria, error) {
+	profile, exists := cfg.Profiles[profilename]
+	if !exists {
+		return ScreenerCriteria{}, fmt.Errorf("profile %s not found", profilename)
+	}
+
+	return ScreenerCriteria{
+		MinOversoldRSI: profile.Indicators.RSI.MinOversold,
+		MaxRSI:         profile.Indicators.RSI.MaxOverbought,
+		MinATR:         profile.Indicators.ATR.MinVolatility,
+		MinVolumeRatio: profile.Indicators.Volume.MinRatio,
+	}, nil
+}
+
+func ScreenStockWithConfig(symbols []string, timeframe string, numBars int, cfg *config.Config, profileName string, newsStorage *NewsStorage) ([]StockScore, error) {
+	criteria, err := GetScreenerCriteriaFromProfile(cfg, profileName)
+	if err != nil {
+		return nil, err
+	}
+	return ScreenStocks(symbols, timeframe, numBars, criteria, newsStorage)
 }

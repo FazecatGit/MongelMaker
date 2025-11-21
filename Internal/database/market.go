@@ -75,24 +75,20 @@ func calculateSMA(bars []Bar) float64 {
 	return sum / float64(len(bars))
 }
 
-// visit later
+// visit later a lot of repetitive code
 func GenerateSignal(symbol string) (*Signal, error) {
-	// Fetch current price
 	currentPrice, err := GetCurrentPrice(symbol)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current price for %s: %w", symbol, err)
 	}
 
-	// Fetch historical data
 	historicalData, err := FetchAllTimeframes(symbol, "1Day", 100)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get historical data for %s: %w", symbol, err)
 	}
 
-	// Calculate SMA
 	sma := calculateSMA(historicalData.OneDayData)
 
-	// Generate signal
 	var action string
 	if currentPrice > sma {
 		action = "BUY"
