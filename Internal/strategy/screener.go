@@ -9,7 +9,7 @@ import (
 
 	"github.com/alpacahq/alpaca-trade-api-go/v3/alpaca"
 
-	"github.com/fazecat/mongelmaker/Internal/datafeed"
+	datafeed "github.com/fazecat/mongelmaker/Internal/database"
 	. "github.com/fazecat/mongelmaker/Internal/news_scraping"
 	"github.com/fazecat/mongelmaker/Internal/utils"
 	"github.com/fazecat/mongelmaker/Internal/utils/config"
@@ -107,7 +107,6 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 		atr = findLatestValue(atrMap)
 	}
 
-	// Analyze latest candle
 	latestBar := bars[0]
 	volumes := make([]int64, len(bars))
 	for i, bar := range bars {
@@ -153,7 +152,6 @@ func scoreStock(symbol, timeframe string, numBars int, criteria ScreenerCriteria
 	whales := DetectWhales(symbol, bars)
 	if len(whales) > 0 {
 		for _, whale := range whales {
-			// HIGH conviction whales get +5 score bonus
 			if whale.Conviction == "HIGH" {
 				score += 5
 				signals = append(signals, fmt.Sprintf("🐋 Whale %s: Z=%.2f", whale.Direction, whale.ZScore))
@@ -196,7 +194,6 @@ func GetTradableAssets() ([]string, error) {
 
 	symbols := make([]string, 0, len(assets))
 	for _, asset := range assets {
-		// Only include stocks, exclude options/crypto for now
 		if asset.Class == "us_equity" && asset.Tradable {
 			symbols = append(symbols, asset.Symbol)
 		}
@@ -215,7 +212,6 @@ func GetPopularStocks() []string {
 	}
 }
 
-// Helper to find latest value in map by timestamp keys
 func findLatestValue(m map[string]float64) *float64 {
 	if len(m) == 0 {
 		return nil
